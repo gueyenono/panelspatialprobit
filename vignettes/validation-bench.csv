@@ -1,0 +1,7 @@
+"design","N","T","n","iterations","ms_per_iter","ess_per_sec_min","ess_per_sec_max","slowest"
+"sar_binary",1000,10,10000,10000,1.31,27.83,67.63,"sigma_alpha"
+"sar_ordered",1000,10,10000,10000,1.66,24.22,84.4,"(Intercept)"
+"sem_binary",1000,10,10000,10000,2.69,9.25,37,"lambda"
+"sar_binary",10000,20,200000,2000,32.51,0.74,2.76,"(Intercept)"
+"sar_ordered",10000,20,200000,2000,40.71,0.51,3.97,"(Intercept)"
+"sem_binary",10000,20,200000,2000,74.44,0.73,1.07,"lambda"

@@ -1,0 +1,44 @@
+# url: https://<github-user>.github.io/panelspatialprobit/  (set once the repository exists)
+template:
+  bootstrap: 5
+
+reference:
+- title: Fitting models
+  contents:
+  - psprobit
+  - psp_dynamic
+  - psp_priors
+  - priors
+  - psp_control
+- title: Spatial weights and simulation
+  contents:
+  - psp_weights
+  - rook_weights
+  - sim_psprobit
+- title: Interpreting fitted models
+  contents:
+  - psp_impacts
+  - psp_response_path
+  - psprobit-methods
+- title: Model checking and comparison
+  contents:
+  - psp_classification
+  - psp_ppc
+  - psp_loglik
+- title: Package
+  contents:
+  - panelspatialprobit-package
+  - reexports
+
+articles:
+- title: Guides
+  navbar: ~
+  contents:
+  - getting-started
+  - ordered-outcomes
+  - impacts
+  - dynamics
+- title: Validation
+  navbar: ~
+  contents:
+  - validation

@@ -1,0 +1,9 @@
+bibentry(
+  bibtype = "Manual",
+  title = "{panelspatialprobit}: Bayesian Panel Spatial Probit and Ordered Probit Models",
+  author = person("Package", "Author"),
+  year = "2026",
+  note = paste("R package version", meta$Version),
+  textVersion = paste0("Package Author (2026). panelspatialprobit: Bayesian Panel Spatial ",
+                       "Probit and Ordered Probit Models. R package version ", meta$Version, ".")
+)

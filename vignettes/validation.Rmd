@@ -1,0 +1,404 @@
+---
+title: "How we validated the samplers"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{How we validated the samplers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", echo = FALSE)
+sbc <- read.csv("validation-sbc.csv", check.names = FALSE)
+mc <- read.csv("validation-mc.csv", check.names = FALSE)
+bench <- read.csv("validation-bench.csv", check.names = FALSE)
+cuts <- read.csv("validation-cutpoints.csv", check.names = FALSE)
+bins <- as.matrix(sbc[, paste0("b", 1:10)])
+```
+
+An MCMC sampler can run, produce plausible numbers and still be wrong: a
+conditional distribution off by a term, a block order that breaks a collapsed
+Gibbs step, a move that does not preserve the target. Such errors bias the
+posterior without any error message. This vignette summarises the evidence
+that the samplers in `panelspatialprobit` target the right posterior and that
+the resulting estimates behave as they should. The scripts and full results
+are in the `validation/` directory of the source repository; the figures below
+are drawn from summaries of those results stored with this vignette.
+
+The evidence comes in four layers:
+
+1. **an independent reference sampler** in the test suite;
+2. **simulation-based calibration** of every model variant;
+3. **a Monte Carlo study** of bias and coverage;
+4. **cross-checks** against other packages.
+
+A last section reports the speed and mixing of the sampler.
+
+## 1. An independent reference sampler
+
+The package contains a second sampler written in plain R that deliberately
+uses different algorithms: dense precision matrices instead of the sparse
+residual updates, random-walk Metropolis steps with exact log-determinants for
+$\rho$, $\lambda$, $\phi$ and the latent AR coefficient instead of griddy
+Gibbs steps, and no scale or cut-point moves. It shares no sampling code with
+the C++ engine. The test suite runs both on the same small data sets (SAR,
+SEM, SARAR, spatial random effects, Student-t errors, time-varying weights,
+latent dynamics, binary and ordered) and requires every posterior mean to agree
+within four Monte Carlo standard errors. A mistake in one sampler
+would have to be repeated, through a different route, in the other.
+
+The cut-point moves are tested separately: started from draws of a known
+joint distribution, one step of the kernel must leave that distribution
+unchanged.
+
+## 2. Simulation-based calibration
+
+Simulation-based calibration (SBC; Talts et al. 2018) checks a sampler
+against its own model. Draw parameters from the prior, simulate a data set
+from them, fit the model, and record the rank of the true value among the
+posterior draws. If the sampler targets the correct posterior, these ranks are
+uniformly distributed, whatever the data. A sampler that is too confident
+gives U-shaped rank histograms; one that is biased gives skewed ones.
+
+The design: a 4 × 4 rook grid ($N = 16$), $T = 4$ periods, proper priors
+($\beta \sim N(0, 1)$, $(\rho + 1)/2 \sim \text{Beta}(2, 2)$, the same for
+$\lambda$ and $\phi$, $\sigma_\alpha^2 \sim \text{Inv-Gamma}(3, 1)$,
+cut-points $\sim N(1, 1)$), 500 replications per variant, two chains, 400
+thinned posterior draws per fit. Uniformity of each parameter's ranks is tested
+by a chi-square test on 10 bins.
+
+```{r}
+runs <- unique(sbc[, c("variant", "seed_offset")])
+```
+
+In all, `r nrow(runs)` runs of `r length(unique(sbc$variant))` variants were
+made, with `r nrow(sbc)` rank tests. Under correct calibration the p-values of
+these tests are themselves uniform: about 5% should fall below 0.05 and 1%
+below 0.01 by chance alone.
+
+```{r, fig.width = 7, fig.height = 3.6, fig.alt = "Histogram and uniform quantile plot of SBC p-values"}
+op <- par(mfrow = c(1, 2), mar = c(4, 4, 2, 1), cex = 0.8)
+hist(sbc$p, breaks = seq(0, 1, 0.05), main = "SBC p-values", xlab = "chi-square p-value",
+     col = "grey80", border = "white")
+abline(h = nrow(sbc) / 20, lty = 2)
+latent_default <- sbc$variant == "sar_lat_re_bin"
+plot(ppoints(nrow(sbc)), sort(sbc$p), pch = 19, cex = 0.5, xlab = "uniform quantile",
+     ylab = "sorted p-value", main = "Against the uniform",
+     col = ifelse(latent_default[order(sbc$p)], "firebrick", "grey30"))
+abline(0, 1, lty = 2)
+par(op)
+```
+
+The p-values are close to uniform. Of the `r nrow(sbc)` tests,
+`r sum(sbc$p < 0.05)` fall below 0.05 and `r sum(sbc$p < 0.01)` below 0.01:
+
+```{r}
+low <- sbc[sbc$p < 0.01, c("variant", "seed_offset", "parameter", "p", "median_rhat")]
+knitr::kable(low, row.names = FALSE, col.names = c("variant", "seed offset", "parameter",
+                                                    "p", "median max R-hat"))
+```
+
+Two of them come from the latent AR model with SAR at the default chain length
+(red in the right panel). There the ranks of the latent AR coefficient are
+U-shaped, and the failures concentrate in the replications whose chains had
+not converged (max $\hat R \geq 1.02$): the sampler mixes slowly, rather than
+targeting the wrong distribution. With chains three times as long, the same
+variant passes:
+
+```{r, fig.width = 7, fig.height = 2.6, fig.alt = "Rank histograms of the latent AR coefficient at two chain lengths"}
+rank_hist <- function(v, p, main, off = 0) {
+  i <- which(sbc$variant == v & sbc$parameter == p & sbc$seed_offset == off)
+  barplot(bins[i, ], names.arg = NA, space = 0, col = "grey70", border = "white",
+          main = main, ylim = c(0, max(bins[i, ], 1.6 * sbc$reps[i] / 10)), cex.main = 0.9)
+  abline(h = sbc$reps[i] / 10, lty = 2)
+  mtext(sprintf("p = %.3f", sbc$p[i]), side = 3, line = 0, cex = 0.7)
+}
+op <- par(mfrow = c(1, 2), mar = c(1, 3, 3, 1), cex = 0.8)
+rank_hist("sar_lat_re_bin", "lag_z", "lag_z, default chains")
+rank_hist("sar_lat_re_bin_long", "lag_z", "lag_z, chains 3x as long")
+par(op)
+```
+
+The third is a cut-point of the SARAR model with time-varying weights; a
+replication with other seeds passes (p = 0.874). SARAR models with
+$M = W$ show borderline results for $\rho$ and $\lambda$ at the default chain
+length, again from slow mixing (the two parameters are nearly
+interchangeable); this is why `?psprobit` asks for longer chains for them.
+
+The rank histograms of a few central parameters:
+
+```{r, fig.width = 7, fig.height = 4.6, fig.alt = "Rank histograms for six parameters"}
+op <- par(mfrow = c(2, 3), mar = c(1, 3, 3, 1), cex = 0.8)
+rank_hist("sar_re_bin", "rho", "SAR, binary: rho")
+rank_hist("sar_re_bin", "sigma_alpha", "SAR, binary: sigma_alpha")
+rank_hist("sdm_re_bin", "W_x1", "SDM, binary: W_x1")
+rank_hist("sar_re_ord4", "cut[3|4]", "SAR, J = 4: cut[3|4]")
+rank_hist("sem_re_bin", "lambda", "SEM, binary: lambda")
+rank_hist("sar_dyn_bin", "lag_y", "Dynamic SAR: lag_y")
+par(op)
+```
+
+The summary by variant (the smallest p-value over its parameters, and the
+median over replications of the largest $\hat R$):
+
+```{r}
+agg <- do.call(rbind, lapply(split(sbc, list(sbc$variant, sbc$seed_offset), drop = TRUE),
+                             function(x) data.frame(variant = x$variant[1],
+                                                    seed_offset = x$seed_offset[1],
+                                                    parameters = nrow(x), min_p = min(x$p),
+                                                    median_rhat = x$median_rhat[1])))
+agg <- agg[order(agg$variant, agg$seed_offset), ]
+knitr::kable(agg, row.names = FALSE, digits = 3,
+             col.names = c("variant", "seed offset", "parameters", "min p",
+                           "median max R-hat"))
+```
+
+Variant names give the model, the random effects (`re`: random, `pool`:
+pooled, `sre`: spatial random effects, `mundlak`, `chamberlain`), the outcome
+(`bin`, or `ord` with the number of categories), and any extension: `t`
+(Student-t errors with 4 degrees of freedom), `tv` (time-varying weights),
+`dyn` (lagged outcome with Wooldridge initial conditions), `lat` (latent AR
+dynamics), `missing` (20% of outcomes missing), `ac` (Albert–Chib cut-point
+sampler instead of the default transformation move), `long` (longer chains).
+With several parameters per variant, the smallest p-value is naturally small;
+under correct calibration it falls below 0.05 for roughly a fifth to a third
+of the variants.
+
+### The same test for `spatialprobit`
+
+The same check, applied to `spatialprobit::sarprobit` (version 1.0.4) on a
+cross-section (an 8 × 8 grid, $T = 1$, pooled SAR probit, 500 replications),
+gave a clear failure. The sampler returned undefined draws in 264 of the 500
+replications, and among the others the ranks of $\rho$ pile up in the top bin:
+its posterior understates $\rho$. `panelspatialprobit` on the identical design
+had no failures and uniform ranks:
+
+```{r, fig.width = 7, fig.height = 2.6, fig.alt = "Rank histograms of rho for spatialprobit and panelspatialprobit"}
+sp <- c(28, 15, 14, 15, 15, 12, 19, 20, 22, 76)
+psp <- c(48, 52, 63, 55, 47, 51, 53, 39, 43, 49)
+op <- par(mfrow = c(1, 2), mar = c(1, 3, 3, 1), cex = 0.8)
+barplot(sp, space = 0, col = "grey70", border = "white", main = "spatialprobit: rho",
+        cex.main = 0.9)
+abline(h = sum(sp) / 10, lty = 2)
+mtext("236 successful replications, p < 0.0001", side = 3, line = 0, cex = 0.7)
+barplot(psp, space = 0, col = "grey70", border = "white", main = "panelspatialprobit: rho",
+        cex.main = 0.9)
+abline(h = sum(psp) / 10, lty = 2)
+mtext("500 replications, p = 0.550", side = 3, line = 0, cex = 0.7)
+par(op)
+```
+
+Reading its source suggests three causes: the draw of $\rho$ uses the
+concentrated likelihood of the linear SAR model (which integrates out an error
+variance that the probit fixes at one), the block order breaks the rule for
+partially collapsed Gibbs samplers, and the truncated-normal step restarts its
+inner chain every iteration. Which of them causes the bias was not isolated.
+Keeping only the successful replications may itself distort the ranks, so the
+size of the bias is uncertain, but its presence is not.
+
+## 3. Monte Carlo study
+
+SBC averages over the prior. A Monte Carlo study instead fixes the true
+parameters and asks how the estimates behave across repeated samples: bias and
+root mean squared error of the posterior mean, and the coverage of 90%
+credible intervals (which should be close to 90% when the priors are weak
+relative to the data). Each design was replicated 200 times with 10 periods
+on rook grids of $N = 100$ or 400 units.
+
+```{r}
+mc_tab <- mc[, c("design", "parameter", "true", "bias", "rmse", "cover90", "width")]
+knitr::kable(mc_tab, row.names = FALSE, digits = 3,
+             col.names = c("design", "parameter", "true", "bias", "RMSE",
+                           "90% coverage", "interval width"))
+```
+
+The static designs (binary SAR at $N = 100$ and 400, ordered SAR with four
+categories) show biases of at most 0.02 and coverage between 0.88 and 0.92,
+including for the total impact of $x_1$ (`impact_x1`), which is compared with
+its true value computed from the true parameters. Quadrupling $N$ halves
+the RMSE and interval widths, as it should.
+
+The dynamic designs (`dyn_*`) use one data-generating process, with state
+dependence ($\gamma = 0.8$, `lag_y`) and random effects
+($\sigma_\alpha = 0.8$), and fit three models to it. The Wooldridge
+random-effects model recovers $\gamma$ (bias 0.01, coverage 0.93). The pooled
+dynamic model attributes the heterogeneity to state dependence: $\gamma$ is
+overstated by 0.31 and the slopes are biased towards zero, so its intervals
+almost never cover the truth. The static random-effects model, which
+leaves out the lag, still estimates the slopes and $\rho$ well. See
+`vignette("dynamics")`.
+
+### The Wang and Kockelman simulation
+
+Wang and Kockelman (2009) introduced the dynamic spatial ordered probit with
+latent AR(1) dynamics and spatially autocorrelated effects, and evaluated it
+on simulated data:
+
+- three categories (thresholds 0 and 2.1) and four uniform regressors with
+  $\beta = (-1.7, 2, 1, 0.5)$, over 8 periods;
+- latent persistence $\lambda \in \{0.1, 0.5, 0.9\}$ crossed with spatial
+  dependence of the effects $\rho \in \{0.1, 0.6, 0.7, 0.9\}$;
+- 50 data sets per cell.
+
+We repeated this design with `psoprobit(model = "none", effects =
+"spatial_random", dynamic = psp_dynamic(latent = TRUE))`. Their $\lambda$ is
+our `lag_z`, their $\rho$ our `phi`, and their $\sigma^2$ our
+$\sigma_\alpha^2$. Three adaptations were needed:
+
+- **Units.** Each of the 300 units has its own effect, on a 15 × 20 queen
+  grid. This is a case their model allows; their own study used 30 regions of
+  10 individuals.
+- **Error variances.** All are equal to one, where theirs vary by region.
+- **Thresholds.** Their thresholds are computed from our intercept and
+  cut-point, so that the two sets of estimates are directly comparable.
+
+We ran 2 chains of 15,000 draws after 5,000 of warm-up for each fit, where they
+used one chain of 2,000.
+
+```{r}
+wk <- read.csv("validation-wk.csv")
+cells <- unique(wk[, c("lambda", "rho")])
+wk_tab <- do.call(rbind, lapply(seq_len(nrow(cells)), function(k) {
+  x <- wk[wk$lambda == cells$lambda[k] & wk$rho == cells$rho[k], ]
+  g <- function(p, col) x[x$parameter == p, col]
+  sl <- x[x$parameter %in% c("x1", "x2", "x3", "x4"), ]
+  data.frame(lambda = cells$lambda[k], rho = cells$rho[k],
+             lambda_psp = g("lambda", "mean"), lambda_wk = g("lambda", "paper"),
+             rho_psp = g("rho", "mean"), rho_wk = g("rho", "paper"),
+             sigma2_psp = g("sigma2", "mean"), sigma2_wk = g("sigma2", "paper"),
+             slope_bias_psp = max(abs(sl$mean - sl$true)),
+             slope_bias_wk = max(abs(sl$paper - sl$true)),
+             cover90 = mean(x$cover90), rhat = g("x1", "rhat_share_1.05"))
+}))
+knitr::kable(wk_tab, row.names = FALSE, digits = 3,
+             col.names = c("&lambda;", "&rho;", "&lambda;: ours", "&lambda;: W&amp;K",
+                           "&rho;: ours", "&rho;: W&amp;K", "&sigma;&sup2;: ours",
+                           "&sigma;&sup2;: W&amp;K", "max slope bias: ours",
+                           "max slope bias: W&amp;K", "90% coverage",
+                           "share R-hat &ge; 1.05"))
+```
+
+The columns give the averages of the posterior means over the 50 data sets
+(true $\sigma^2 = 1$), the largest absolute bias of the four slopes, the 90%
+coverage averaged over all nine parameters, and the share of fits whose
+largest $\hat R$ is at least 1.05. The full table, with RMSEs and the
+thresholds, is in `validation/wang_kockelman/results/`.
+
+Our estimates are close to the truth in every cell: overall 90% coverage is
+`r round(mean(wk$cover90), 2)`, and the largest average bias of any
+parameter is `r round(max(abs(wk$mean - wk$true)), 2)`. The paper's estimates
+drift with $\lambda$ and $\rho$: $\sigma^2$ up to 1.8, and $\rho$ understated
+when it is small. Their heteroskedastic design and shorter chains differ from
+ours, so this does not locate the source of their bias.
+
+When $\rho = 0.9$, about two thirds of the fits still have $\hat R \geq 1.05$
+at our chain length. The effects are then nearly a common level shared by all
+units, which trades off against the intercept, so the thresholds (not the
+slopes) mix slowly. Their RMSE is about 0.6, against 0.2 elsewhere. As
+`?psprobit` advises, strongly autocorrelated effects need longer chains.
+
+## 4. Cross-checks against other packages
+
+Where another implementation of the same model exists, the posteriors should
+agree up to Monte Carlo error.
+
+- **`MCMCpack::MCMCoprobit`** (non-spatial pooled ordered probit, $N = 300$,
+  $T = 4$, $J = 4$): every posterior mean agrees within 0.03 posterior
+  standard deviations, and the posterior standard deviations agree within 2%.
+- **`spatialprobit::sarprobit`** on its Katrina data (a cross-section of 673
+  firms, pooled SAR probit, near-diffuse priors): the posterior means agree
+  within 0.65 posterior standard deviations for all ten parameters, with
+  `spatialprobit` started from good values (its defaults fail on these data).
+  Given the SBC result above, exact agreement is not expected.
+  `panelspatialprobit` was about 7 times faster.
+- **`spatialprobit::sarorderedprobit`** (simulated pooled SAR ordered probit,
+  20 × 20 grid, $T = 1$, $J = 4$, near-diffuse priors): every posterior mean
+  agrees within 0.07 posterior standard deviations. The cut-points of
+  `spatialprobit` mix slowly: an effective sample size of about 400 from
+  200,000 draws, against 6,000–7,000 here from 32,000 draws, which took 2 s
+  instead of 4 minutes.
+
+## 5. Speed and mixing
+
+Correctness is only useful if the sampler is fast enough to run long
+chains. The table below gives the time per iteration and the effective sample
+size per second for three random-effects models with five regressors, each
+fitted with one chain on one core of an Intel Core i7-4790K: 10,000
+iterations (half warm-up) at $N = 1{,}000$, and 2,000 at $N = 10{,}000$. The
+effective sample size per second divides the bulk ESS by the whole run time,
+including warm-up and the log-determinant grid; the range is over the
+parameters, and the last column names the slowest one. The short chains at
+$N = 10{,}000$ make those figures a rough guide.
+
+```{r}
+model_names <- c(sar_binary = "SAR probit", sar_ordered = "SAR ordered probit (J = 4)",
+                 sem_binary = "SEM probit")
+bench_tab <- data.frame(
+  model = model_names[bench$design], N = format(bench$N, big.mark = ","), T = bench$T,
+  ms = bench$ms_per_iter,
+  ess = sprintf("%.1f to %.1f", bench$ess_per_sec_min, bench$ess_per_sec_max),
+  slowest = bench$slowest)
+knitr::kable(bench_tab, row.names = FALSE, digits = 1,
+             col.names = c("model", "N", "T", "ms per iteration", "ESS per second",
+                           "slowest parameter"))
+```
+
+The ordered model costs about a quarter more per iteration than the binary
+one, mainly for the cut-point updates. The SEM model costs two to two and a
+half times as much, mainly because the precision of the random effects
+depends on $\lambda$ and must be factorised again in every iteration. At
+$N = 10{,}000$ and $T = 20$ (200,000 observations), 10,000 iterations take
+about `r round(10000 * bench$ms_per_iter[bench$N == 10000 & bench$design == "sar_binary"] / 6e4, 1)`
+minutes for the SAR probit and
+`r round(10000 * bench$ms_per_iter[bench$N == 10000 & bench$design == "sem_binary"] / 6e4, 1)`
+minutes for the SEM probit. The script is `validation/bench/bench_models.R`.
+
+### Cut-points
+
+In ordered models the cut-points are the hardest parameters to sample. The
+Albert–Chib step draws each cut-point between the latent values of the
+neighbouring categories, which pin it down tightly when there are many
+observations, so it moves very little per iteration. The default sampler
+adds a transformation move that shifts the cut-points and the latent values
+together (`?psp_control`, `cutpoint_sampler`). The table compares the two on
+ordered SAR random-effects models with $N = 400$ and $T = 5$, with $J = 3$
+and $J = 5$ categories (four chains of 3,000 draws after 1,000 of warm-up;
+the ratio is the ESS per second of the default sampler over that of the
+Albert–Chib step alone).
+
+```{r}
+knitr::kable(data.frame(J = sub("J", "", cuts$design), cuts[, -1]), row.names = FALSE,
+             col.names = c("J", "parameter", "ESS (default)", "ESS (Albert-Chib)",
+                           "ESS/s (default)", "ESS/s (Albert-Chib)", "ratio"))
+```
+
+```{r}
+cut_rows <- grepl("^cut", cuts$parameter)
+other <- cuts$ratio[!cut_rows]
+```
+
+For the interior cut-points with $J = 5$ the move raises the ESS per second
+`r round(min(cuts$ratio[cut_rows & cuts$design == "J5" & cuts$ratio > 10]))`- to
+`r round(max(cuts$ratio[cut_rows]))`-fold; the last cut-point already mixes
+well under the Albert–Chib step, so it gains little. With $J = 3$ the gain is
+`r cuts$ratio[cut_rows & cuts$design == "J3"]`-fold. The other parameters
+change little (ratios `r min(other)` to `r max(other)`): the move adds about
+15% to the time per iteration, and the rest of the spread is probably Monte
+Carlo noise in the ESS estimates. The script is
+`validation/bench/bench_cutpoints.R`.
+
+## References
+
+Talts, S., Betancourt, M., Simpson, D., Vehtari, A. and Gelman, A. (2018).
+Validating Bayesian inference algorithms with simulation-based calibration.
+arXiv:1804.06788.
+
+van Dyk, D. A. and Park, T. (2008). Partially collapsed Gibbs samplers: theory
+and methods. *Journal of the American Statistical Association* 103, 790–796.
+
+Wang, X. and Kockelman, K. M. (2009). Bayesian inference for ordered
+response data with a dynamic spatial-ordered probit model. *Journal of
+Regional Science* 49, 877–913.
+
+Wilhelm, S. and de Matos, M. G. (2013). Estimating spatial probit models in R.
+*The R Journal* 5(1), 130–143.

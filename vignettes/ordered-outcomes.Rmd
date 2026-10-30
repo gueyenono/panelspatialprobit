@@ -1,0 +1,134 @@
+---
+title: "Ordered outcomes"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Ordered outcomes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+Many spatial panel outcomes are ordered categories: credit ratings, survey
+scales, damage levels, land-use intensity. `psoprobit()` fits the spatial
+ordered probit model. It uses the same arguments as `psprobit()` (see
+`vignette("getting-started")`), so this vignette concentrates on what is
+specific to ordered outcomes.
+
+```{r}
+library(panelspatialprobit)
+```
+
+## The model
+
+The latent model is the same as in the binary case,
+
+$$z_t = \rho W z_t + X_t\beta + W X_t\theta + \alpha + \varepsilon_t,
+\qquad \varepsilon_t \sim N(0, I_N),$$
+
+and the observed category is $y_{it} = j$ when
+$\kappa_{j-1} < z_{it} \le \kappa_j$, for $j = 1, \dots, J$, with
+$\kappa_0 = -\infty$ and $\kappa_J = +\infty$.
+
+**Identification.** The model includes an intercept, so the first cut-point is
+fixed at $\kappa_1 = 0$, and the free cut-points are
+$0 < \kappa_2 < \dots < \kappa_{J-1}$ (named `cut[2|3]`, `cut[3|4]`, ...). This
+is the parameterisation of `MCMCpack::MCMCoprobit`. Packages such as
+`MASS::polr` and `ordinal::clm` drop the intercept and estimate all $J - 1$
+thresholds instead; `summary()` reports the thresholds in that
+parameterisation too, $\zeta_j = \kappa_j - \beta_0$.
+
+The response can be an ordered factor, a factor (its level order is used) or
+integer codes. Every category must occur in the data.
+
+## Example
+
+We simulate $J = 4$ categories on a 10 × 10 grid observed over 5 periods:
+
+```{r}
+W <- psp_weights(rook_weights(10, 10), style = "W")
+d <- sim_psprobit(W, T = 5, beta = c(0.2, 1, -0.8), rho = 0.5, sigma_alpha = 0.6,
+                  cutpoints = c(0.8, 1.6), seed = 7)
+d$y <- factor(d$y, labels = c("none", "low", "medium", "high"), ordered = TRUE)
+table(d$y)
+```
+
+```{r}
+fit <- psoprobit(y ~ x1 + x2, data = d, index = c("id", "time"), W = W,
+                 control = psp_control(iter = 3000, warmup = 1000, chains = 2,
+                                       seed = 1, progress = FALSE))
+summary(fit)
+```
+
+The truth is $\beta = (0.2, 1, -0.8)$, $\rho = 0.5$, $\sigma_\alpha = 0.6$ and
+cut-points $(0, 0.8, 1.6)$.
+
+## Impacts per category
+
+A regressor moves probability mass between categories: if it raises the latent
+outcome, the top categories become more likely and the bottom ones less
+likely. Impacts are therefore reported **per category** and, for each
+regressor and effect type, sum to zero over the categories.
+
+```{r}
+imp <- fit$impacts
+s <- summary(imp)
+s[s$variable == "x1" & s$effect == "total", c("category", "mean", "q2.5", "q97.5")]
+sum(s$mean[s$variable == "x1" & s$effect == "total"])
+```
+
+The options of `psp_impacts()` (`type = "unit"`, `by_period = TRUE`,
+`scale = "lesage_pace"`) work as for binary models.
+
+## Predicted probabilities
+
+`predict(type = "prob")` returns an $NT \times J$ matrix of posterior mean
+category probabilities, in the row order of the data; `type = "class"` returns
+the most probable category.
+
+```{r}
+head(round(predict(fit), 3))
+psp_classification(fit)$confusion
+```
+
+## The cut-point sampler
+
+Updating the cut-points one at a time given the latent values (Albert and Chib
+1993) mixes slowly when there are many observations, because each cut-point is
+squeezed between the latent values of the neighbouring categories. The default
+sampler (`cutpoint_sampler = "transform"`) adds a joint Metropolis–Hastings move
+that shifts a cut-point and rescales the latent values of the two adjacent
+categories with it (Liu and Sabatti 2000), so the cut-point can move far in
+one step. Its step size is tuned during warm-up; the acceptance rates after
+warm-up are stored in the fit:
+
+```{r}
+fit$cut_accept
+```
+
+`cutpoint_sampler = "albert_chib"` uses the Gibbs step alone. Both samplers
+target the same posterior and pass simulation-based calibration; the
+transformation move gives a higher effective sample size per second for the
+cut-points, by up to two orders of magnitude for interior cut-points (see
+`vignette("validation")`).
+
+## Priors on the cut-points
+
+The default prior is $N(0, 10^2)$ on each free cut-point, restricted to the
+ordering constraint. `psp_priors(cutpoints = prior_flat())` uses a flat prior,
+as `MCMCpack::MCMCoprobit` does.
+
+## References
+
+Albert, J. H. and Chib, S. (1993). Bayesian analysis of binary and
+polychotomous response data. *Journal of the American Statistical
+Association* 88, 669–679.
+
+LeSage, J. P., Pace, R. K., Lam, N., Campanella, R. and Liu, X. (2011). New
+Orleans business recovery in the aftermath of Hurricane Katrina. *Journal of
+the Royal Statistical Society A* 174, 1007–1027.
+
+Liu, J. S. and Sabatti, C. (2000). Generalised Gibbs sampler and multigrid
+Monte Carlo for Bayesian computation. *Biometrika* 87, 353–369.

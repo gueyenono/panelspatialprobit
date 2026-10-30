@@ -1,0 +1,9 @@
+N = 1000, T = 10, k = 5: 10000 iterations in 13.1 s (1.31 ms/iter); impacts (200 draws) 4.3 s
+     variable ess_bulk ess_per_sec
+1 (Intercept)      405        30.9
+2          x1      507        38.7
+3          x2      489        37.3
+4          x3      885        67.5
+5          x4      665        50.7
+6         rho      707        53.9
+7 sigma_alpha      364        27.8

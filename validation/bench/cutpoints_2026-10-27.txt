@@ -1,0 +1,22 @@
+Cut-point samplers: N = 400, T = 5, 4 chains x 3000 draws (1000 warm-up)
+
+[J3] seconds: transform 6.4, albert_chib 5.6
+    variable ess_transform ess_ac ess_s_transform ess_s_ac ratio
+ (Intercept)          1751   1779           272.8    315.9   0.9
+          x1          1811   1883           282.3    334.2   0.8
+          x2          2352   2211           366.5    392.5   0.9
+         rho          1895   2387           295.3    423.7   0.7
+ sigma_alpha           987    813           153.8    144.4   1.1
+    cut[2|3]          1609    334           250.7     59.3   4.2
+
+[J5] seconds: transform 6.8, albert_chib 5.9
+    variable ess_transform ess_ac ess_s_transform ess_s_ac ratio
+ (Intercept)          2045   1877           301.5    319.2   0.9
+          x1          3041   2337           448.2    397.2   1.1
+          x2          3638   2987           536.2    507.8   1.1
+         rho          3364   3468           495.9    589.5   0.8
+ sigma_alpha          1434   1221           211.3    207.6   1.0
+    cut[2|3]          1159     13           170.8      2.2  77.6
+    cut[3|4]          1078     51           158.9      8.6  18.5
+    cut[4|5]          1303    949           192.0    161.3   1.2
+

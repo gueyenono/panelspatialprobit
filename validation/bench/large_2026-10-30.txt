@@ -1,0 +1,11 @@
+N = 10000, T = 20, k = 5 (n = 200000): 2000 iterations in 66 s (32.9 ms/iter, including the log-determinant grid, sparse); 10,000 iterations would take about 5.5 min. 
+Impacts (50 draws, stochastic diagonals): 19 s
+
+    variable   mean truth ess_bulk
+ (Intercept) -0.006   0.0       48
+          x1  0.995   1.0      130
+          x2 -0.993  -1.0      147
+          x3  0.505   0.5      179
+          x4  0.502   0.5      179
+         rho  0.492   0.5      106
+ sigma_alpha  0.690   0.7      103

@@ -1,0 +1,20 @@
+N = 1000, T = 10, k = 5: 10000 iterations in 12.7 s (1.27 ms/iter); impacts (200 draws) 24.7 s
+     variable ess_bulk ess_per_sec
+1 (Intercept)      376        29.7
+2          x1      534        42.2
+3          x2      582        46.0
+4          x3      716        56.6
+5          x4      785        62.0
+6         rho      725        57.3
+7 sigma_alpha      396        31.3
+
+Re-run after the A = RS engine rewrite (same day):
+N = 1000, T = 10, k = 5: 10000 iterations in 13.1 s (1.31 ms/iter); impacts (200 draws) 3.9 s
+     variable ess_bulk ess_per_sec
+1 (Intercept)      469        35.9
+2          x1      540        41.3
+3          x2      538        41.1
+4          x3      617        47.2
+5          x4      609        46.5
+6         rho      645        49.3
+7 sigma_alpha      472        36.0
