@@ -15,6 +15,7 @@ The design and roadmap are in `plan/`:
 | `plan/03_package_architecture.md` | API and layout |
 | `plan/04_validation_and_testing.md` | Testing |
 | `plan/05_roadmap.md` | Phases and checklists |
+| `plan/06_rust_integration.md` | Rust migration (decided 2026-10-30, not started) |
 
 Read the relevant plan file before changing a sampler block. `literature/` and `related_packages/` hold reference papers and third-party package sources; both are excluded from the build.
 
@@ -110,7 +111,7 @@ Phases 1–6 and vignettes (7.1) are done; `R CMD check --as-cran` gives 1 NOTE 
    - SBC and Monte Carlo evidence, as summarised in `vignette("validation")`;
    - an empirical application, which needs item 4.
 7. **Reference papers** (Phase 0). Obtain the paywalled papers in the "Reading to obtain" table of `plan/05_roadmap.md`. Then check the model specifications against the published versions, especially Baltagi, Egger & Kesina (2018) and Wang & Kockelman (2009). The Wang & Kockelman replication (`validation/wang_kockelman/`) follows the 2008 TRB working-paper version in `literature/`; check its design and Table 1 against the published paper.
-8. **CRAN submission.** Submit after items 1–5.
+8. **CRAN submission.** Submit after items 1–5 and the Rust migration (`plan/06_rust_integration.md`, phases R0–R5): the first CRAN release is the Rust version (decision R-D8, 2026-10-30), and the item 5 checks run on that build.
 
 **Optional work that Claude can do on request:**
 
