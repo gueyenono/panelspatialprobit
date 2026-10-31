@@ -1,0 +1,202 @@
+# panelspatialprobit
+
+Bayesian estimation of **panel spatial probit** and **panel spatial
+ordered probit** models in R.
+
+For unit $`i`$ and period $`t`$ the latent outcome follows
+
+``` math
+z_t = \rho W z_t + X_t\beta + W X_t\theta + \alpha + u_t,\qquad u_t = \lambda M u_t + \varepsilon_t,\qquad \varepsilon_t \sim N(0, I_N),
+```
+
+with $`y_{it} = 1\{z_{it} > 0\}`$ (binary) or $`y_{it} = j`$ when
+$`\kappa_{j-1} < z_{it} \le \kappa_j`$ (ordered). Supported options:
+
+- **Spatial specification:** `model = "sar"`, `"sdm"`, `"slx"`, `"sem"`,
+  `"sdem"`, `"sarar"` or `"none"`, with separate error weights `M` if
+  needed.
+- **Spatial weights:** one matrix, or one per period (time-varying
+  weights).
+- **Heterogeneity:** pooled, random or spatially autocorrelated random
+  effects (`effects =`). Correlated random effects use Mundlak means
+  (`cre = ~ x1`) or Chamberlain period values
+  (`cre = list(type = "chamberlain", vars = ~ x1)`), and
+  `time_effects = TRUE` adds period dummies.
+- **Impacts:** average direct, indirect and total effects on
+  probabilities (per category for ordered models), population-averaged
+  or conditional on the random effects, overall or per period.
+- **Dynamics:** lagged outcomes and their spatial lag, with Wooldridge
+  initial conditions (`dynamic = psp_dynamic()`), or latent AR(1)
+  dynamics (`psp_dynamic(latent = TRUE)`), and dynamic response paths
+  ([`psp_response_path()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_response_path.md)).
+- **Errors:** normal (probit) or Student-t (`errors = psp_t(df)`,
+  robit).
+- **Missing outcomes** are imputed during sampling.
+- **Fit and checking:** predicted and counterfactual probabilities
+  (`predict(newdata = )`), hit rate and AUC
+  ([`psp_classification()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_classification.md)),
+  posterior predictive checks
+  ([`psp_ppc()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_ppc.md)),
+  and an experimental simulated likelihood with DIC
+  ([`psp_loglik()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md),
+  [`psp_dic()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)).
+- **Sampler:** written in C++. Several chains are reproducible from one
+  seed, and convergence diagnostics come from the `posterior` package.
+
+The package is in early development (see `plan/` for the roadmap). Rows
+must form a balanced panel (outcomes may be missing).
+
+## Example
+
+``` r
+
+library(panelspatialprobit)
+
+W <- psp_weights(rook_weights(10, 10), style = "W")
+d <- sim_psprobit(W, T = 5, beta = c(0, 1, -1), rho = 0.6, sigma_alpha = 0.8, seed = 42)
+
+fit <- psprobit(y ~ x1 + x2, data = d, index = c("id", "time"), W = W,
+                control = psp_control(seed = 1))
+summary(fit)          # posterior summary, R-hat, ESS, impacts
+psp_impacts(fit)      # direct / indirect / total effects on P(y = 1)
+predict(fit)          # posterior mean probabilities, in the row order of `d`
+
+# ordered outcome
+d2 <- sim_psprobit(W, T = 5, beta = c(0, 1, -1), rho = 0.5, cutpoints = c(0.8, 1.6), seed = 7)
+fit2 <- psoprobit(y ~ x1 + x2, data = d2, index = c("id", "time"), W = W)
+```
+
+## How the sampler works
+
+Each model reduces, given its spatial parameters, to a Gaussian kernel
+$`\lVert Az - b\rVert^2`$ for the latent outcomes with a sparse operator
+$`A = (I - \lambda M)(I - \rho W)`$, so one sampler handles every
+variant. Each iteration draws, in order:
+
+1.  the latent outcomes, with exact, warm-started truncated-normal Gibbs
+    sweeps that update residuals in place (no matrix solves);
+2.  $`\rho`$, by griddy Gibbs with $`\beta`$ integrated out;
+3.  $`\beta`$, then $`\lambda`$ (griddy Gibbs), then the random effects
+    and their variance (half-Cauchy prior);
+4.  for ordered models, the cut-points: an Albert–Chib step plus a joint
+    move of cut-points and latent values;
+5.  a scale move that rescales all of the above jointly (Liu & Sabatti,
+    2000), which improves mixing.
+
+`plan/02_estimation_algorithms.md` gives the details.
+
+## Validation
+
+- **Reference sampler:** the C++ engine is tested against a dense pure-R
+  sampler that uses different algorithms
+  (`tests/testthat/test-reference.R`).
+- **Simulation-based calibration:** every supported model variant passes
+  SBC (`validation/sbc/run_sbc.R`).
+- **Monte Carlo study:** bias, RMSE and coverage at fixed parameters,
+  including state dependence versus heterogeneity in dynamic models
+  (`validation/montecarlo/run_mc.R`).
+- **Impacts:** checked against finite differences of the exact
+  probabilities.
+- **Cut-point moves:** a stationarity test on a toy ordered model
+  (`tests/testthat/test-cutmove.R`).
+- **Cross-checks:** agreement with `spatialprobit` on the Katrina data
+  and with `MCMCpack::MCMCoprobit` for non-spatial ordered probit
+  (`validation/crosscheck/`).
+
+The vignettes
+[`vignette("getting-started", package = "panelspatialprobit")`](https://gueyenono.github.io/panelspatialprobit/articles/getting-started.md)
+and
+[`vignette("ordered-outcomes", package = "panelspatialprobit")`](https://gueyenono.github.io/panelspatialprobit/articles/ordered-outcomes.md)
+walk through complete analyses.
+
+# Package index
+
+## Fitting models
+
+- [`psprobit()`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit.md)
+  [`psoprobit()`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit.md)
+  : Bayesian panel spatial probit and ordered probit models
+- [`psp_dynamic()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_dynamic.md)
+  : Dynamic specification
+- [`psp_t()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_t.md)
+  : Student-t latent errors
+- [`psp_priors()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_priors.md)
+  : Priors for panel spatial probit models
+- [`prior_normal()`](https://gueyenono.github.io/panelspatialprobit/reference/priors.md)
+  [`prior_beta()`](https://gueyenono.github.io/panelspatialprobit/reference/priors.md)
+  [`prior_half_cauchy()`](https://gueyenono.github.io/panelspatialprobit/reference/priors.md)
+  [`prior_inv_gamma()`](https://gueyenono.github.io/panelspatialprobit/reference/priors.md)
+  [`prior_flat()`](https://gueyenono.github.io/panelspatialprobit/reference/priors.md)
+  : Prior distributions
+- [`psp_control()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_control.md)
+  : MCMC and computation settings
+
+## Spatial weights and simulation
+
+- [`psp_weights()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_weights.md)
+  : Prepare a spatial weights matrix
+- [`rook_weights()`](https://gueyenono.github.io/panelspatialprobit/reference/rook_weights.md)
+  : Rook contiguity weights on a regular grid
+- [`sim_psprobit()`](https://gueyenono.github.io/panelspatialprobit/reference/sim_psprobit.md)
+  : Simulate panel spatial probit and ordered probit data
+
+## Interpreting fitted models
+
+- [`psp_impacts()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_impacts.md)
+  [`impacts(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psp_impacts.md)
+  : Impacts (marginal effects) on outcome probabilities
+- [`psp_response_path()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_response_path.md)
+  : Dynamic response paths
+- [`print(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`summary(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`coef(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`vcov(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`confint(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`nobs(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`predict(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`fitted(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`plot(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`as_draws(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`tidy(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  [`glance(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md)
+  : Methods for fitted panel spatial probit models
+
+## Model checking and comparison
+
+- [`psp_classification()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_classification.md)
+  : In-sample classification statistics
+- [`psp_ppc()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_ppc.md)
+  : Posterior predictive checks
+- [`psp_loglik()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)
+  [`logLik(`*`<psprobit>`*`)`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)
+  [`psp_dic()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)
+  : Approximate log-likelihood and DIC (experimental)
+
+## Package
+
+- [`panelspatialprobit`](https://gueyenono.github.io/panelspatialprobit/reference/panelspatialprobit-package.md)
+  [`panelspatialprobit-package`](https://gueyenono.github.io/panelspatialprobit/reference/panelspatialprobit-package.md)
+  : panelspatialprobit: Bayesian Panel Spatial Probit and Ordered Probit
+  Models
+- [`reexports`](https://gueyenono.github.io/panelspatialprobit/reference/reexports.md)
+  [`tidy`](https://gueyenono.github.io/panelspatialprobit/reference/reexports.md)
+  [`glance`](https://gueyenono.github.io/panelspatialprobit/reference/reexports.md)
+  : Objects exported from other packages
+
+# Articles
+
+### Guides
+
+- [Getting started with panel spatial
+  probit](https://gueyenono.github.io/panelspatialprobit/articles/getting-started.md):
+- [Ordered
+  outcomes](https://gueyenono.github.io/panelspatialprobit/articles/ordered-outcomes.md):
+- [Interpreting
+  impacts](https://gueyenono.github.io/panelspatialprobit/articles/impacts.md):
+- [Dynamic panel spatial
+  probit](https://gueyenono.github.io/panelspatialprobit/articles/dynamics.md):
+
+### Validation
+
+- [How we validated the
+  samplers](https://gueyenono.github.io/panelspatialprobit/articles/validation.md):

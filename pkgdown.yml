@@ -1,0 +1,13 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  dynamics: dynamics.html
+  getting-started: getting-started.html
+  impacts: impacts.html
+  ordered-outcomes: ordered-outcomes.html
+  validation: validation.html
+last_built: 2026-10-31T02:47Z
+urls:
+  reference: https://gueyenono.github.io/panelspatialprobit/reference
+  article: https://gueyenono.github.io/panelspatialprobit/articles
