@@ -19,6 +19,9 @@ Description: Bayesian Markov chain Monte Carlo estimation of spatial probit
     extension by LeSage (2000) <doi:10.1111/j.1538-4632.2000.tb00413.x> and
     the panel models of Kakamu and Wago (2005).
 License: GPL (>= 3)
+URL: https://github.com/gueyenono/panelspatialprobit,
+    https://gueyenono.github.io/panelspatialprobit/
+BugReports: https://github.com/gueyenono/panelspatialprobit/issues
 Encoding: UTF-8
 Language: en-GB
 Depends: R (>= 4.1)

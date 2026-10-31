@@ -1,4 +1,4 @@
-# url: https://<github-user>.github.io/panelspatialprobit/  (set once the repository exists)
+url: https://gueyenono.github.io/panelspatialprobit/
 template:
   bootstrap: 5
 
@@ -7,6 +7,7 @@ reference:
   contents:
   - psprobit
   - psp_dynamic
+  - psp_t
   - psp_priors
   - priors
   - psp_control
