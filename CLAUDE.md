@@ -57,6 +57,8 @@ sh tools/vendor.sh   # writes src/rust/vendor.tar.xz (not committed) before R CM
 Rscript tools/rust_authors.R   # rewrite inst/AUTHORS after any change to src/rust/Cargo.lock
 (cd src/rust && MIRIFLAGS=-Zmiri-deterministic-floats cargo +nightly miri test -p pspcore -- --skip par::)   # undefined-behaviour check (~1 min)
 Rscript validation/rust_port/check_interrupt.R <lib>   # Ctrl-C during a multi-threaded Rust job (unix)
+Rscript validation/rust_port/compare_sampler.R <lib_cpp> <lib_rust> [iter warmup chains] [case ...]   # Rust vs frozen C++ sampler: same draws, or posterior means (~2 min; 3000 1000 2 for the sparse-RE cases)
+Rscript validation/rust_port/check_fit_threads.R <lib>   # Ctrl-C, progress, mclapply and cores with the Rust sampler (unix)
 ```
 
 ## Architecture
@@ -80,6 +82,7 @@ Rscript validation/rust_port/check_interrupt.R <lib>   # Ctrl-C during a multi-t
   - computes the log-determinant grids for `W` and `M` (`.psp_lndet` in `R/weights.R`);
   - runs one C++ call per chain with L'Ecuyer-CMRG streams, so results are independent of `cores` and the user's RNG state is restored;
   - assembles a `posterior` draws_array.
+- **Sampler.** On branch `rust` the sampler is the Rust port (`src/rust/pspcore/src/sampler/`, called through `psp_rs_sample()`; plan/06), block for block the C++ one below; `options(panelspatialprobit.engine = "cpp")` still selects `src/sampler.cpp` until R5. Chains run on Rust threads (`cores`) on every OS.
 - **C++ sampler.** `src/sampler.cpp` (`psp_sampler_cpp`) runs one chain. Every model is the kernel `|A z - b|^2` with block-diagonal `A = R S`, `S_t = I - rho W_t`, `R_t = I - lambda M_t` (plan/02 s2.2). Weights arrive as lists (`Ops`, one matrix or one per period; `at(ops, t)`), and the log-determinant grids are averages over periods, so `T * lndet` is the sum. Block order matters: z sweep → rho (beta integrated out, given lambda) → beta → lambda → alpha → sigma_alpha → cut-points → scale move. Rho is collapsed over beta, so beta must be redrawn immediately after rho (partially collapsed Gibbs rule).
   - **Latent sweep:** maintains the residual `r = A z - b` and updates it in place using the columns of the sparse `A`, rebuilt once per iteration (no matrix solves).
   - **Random effects:** independent normal draws without an error term; a sparse Cholesky of `sum_t R_t'R_t + B'B / sigma^2` (pattern analysed once) with one or with spatial random effects (`effects = "spatial_random"`, `B = I - phi W`, phi drawn on the `W` grid after alpha).

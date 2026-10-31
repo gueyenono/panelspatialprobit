@@ -4,6 +4,13 @@
 # A kernel that leaves every posterior p(kappa, z | y) invariant must therefore
 # leave the joint distribution, and so the prior marginal of kappa, unchanged.
 
+# The Rust cut-point kernel (pspcore::sampler::cut_kernel), seeded from R's
+# RNG so that set.seed() fixes the whole test.
+cut_kernel <- function(y, mu, z, kap, reps, ac, move) {
+  panelspatialprobit:::psp_rs_cut_kernel(y, mu, z, kap, 4L, 1, 1, 0.7, as.integer(reps), ac,
+                                         move, sample.int(.Machine$integer.max, 6))
+}
+
 draw_prior_kappa <- function(kmean, ksd) {
   repeat {
     k <- rnorm(2, kmean, ksd)
@@ -18,7 +25,7 @@ run_kernel <- function(M, ac, move, reps = 3, n = 12) {
     kap <- draw_prior_kappa(1, 1)
     z <- rnorm(n, mu)
     y <- findInterval(z, c(0, kap)) + 1L
-    res <- panelspatialprobit:::psp_cut_kernel_cpp(y, mu, z, kap, 4L, 1, 1, 0.7, reps, ac, move)
+    res <- cut_kernel(y, mu, z, kap, reps, ac, move)
     y_new <- findInterval(res$z, c(0, res$kappa)) + 1L
     if (!identical(y_new, y)) stop("the kernel changed a category")
     out[m, ] <- res$kappa
@@ -47,6 +54,6 @@ test_that("the transformation move actually moves the cut-points", {
   kap <- c(0.8, 1.6)
   z <- rnorm(n, mu)
   y <- findInterval(z, c(0, kap)) + 1L
-  res <- panelspatialprobit:::psp_cut_kernel_cpp(y, mu, z, kap, 4L, 1, 1, 0.7, 20, FALSE, TRUE)
+  res <- cut_kernel(y, mu, z, kap, 20, FALSE, TRUE)
   expect_false(isTRUE(all.equal(res$kappa, kap)))
 })

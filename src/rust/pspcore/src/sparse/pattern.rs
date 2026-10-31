@@ -1,8 +1,10 @@
 use super::Csc;
 use crate::PspError;
 
-/// The spatial filter `A = (I - lambda M)(I - rho W) = I - rho W - lambda M
-/// + rho lambda M W` on a fixed sparsity pattern (plan/06 §6.7, plan/02 §2.2).
+/// The spatial filter `A = (I - lambda M)(I - rho W)`, that is
+/// `I - rho W - lambda M + rho lambda M W`, on a fixed sparsity pattern
+/// (plan/06 §6.7, plan/02 §2.2). W and M are each optional (a model without
+/// rho or without lambda).
 ///
 /// The pattern is the union of the patterns of I, W, M and M W, computed once.
 /// Each of the four matrices is stored as a value vector on that pattern, so
@@ -14,29 +16,30 @@ pub struct FilterPattern {
     pub colptr: Vec<usize>,
     pub rowind: Vec<usize>,
     e_i: Vec<f64>,
-    e_w: Vec<f64>,
-    e_m: Option<(Vec<f64>, Vec<f64>)>, // (M, M W)
+    e_w: Option<Vec<f64>>,
+    e_m: Option<Vec<f64>>,
+    e_mw: Option<Vec<f64>>,
 }
 
 impl FilterPattern {
-    /// The pattern of `I - rho W` (`m = None`) or of `(I - lambda M)(I - rho W)`.
-    pub fn new(w: &Csc, m: Option<&Csc>) -> Result<Self, PspError> {
-        let n = w.n_rows;
-        if !w.is_square() || m.is_some_and(|m| !m.is_square() || m.n_rows != n) {
+    /// The pattern of `(I - lambda M)(I - rho W)` for N x N matrices, without
+    /// the W term (`w = None`) or the M term (`m = None`).
+    pub fn new(n: usize, w: Option<&Csc>, m: Option<&Csc>) -> Result<Self, PspError> {
+        let ok = |a: Option<&Csc>| a.is_none_or(|a| a.is_square() && a.n_rows == n);
+        if !ok(w) || !ok(m) {
             return Err(PspError::InvalidInput(
                 "spatial filter: W and M must be square and of the same size".to_string(),
             ));
         }
         let eye = Csc::identity(n);
-        let mw = match m {
-            Some(m) => Some(m.matmul(w)?),
-            None => None,
+        let mw = match (m, w) {
+            (Some(m), Some(w)) => Some(m.matmul(w)?),
+            _ => None,
         };
-        let mut parts: Vec<&Csc> = vec![&eye, w];
-        if let (Some(m), Some(mw)) = (m, mw.as_ref()) {
-            parts.push(m);
-            parts.push(mw);
-        }
+        let mut parts: Vec<&Csc> = vec![&eye];
+        parts.extend(w);
+        parts.extend(m);
+        parts.extend(mw.as_ref());
 
         // Union of the patterns, column by column.
         let mut colptr = Vec::with_capacity(n + 1);
@@ -69,11 +72,9 @@ impl FilterPattern {
             out
         };
         let e_i = scatter(&eye);
-        let e_w = scatter(w);
-        let e_m = match (m, mw.as_ref()) {
-            (Some(m), Some(mw)) => Some((scatter(m), scatter(mw))),
-            _ => None,
-        };
+        let e_w = w.map(scatter);
+        let e_m = m.map(scatter);
+        let e_mw = mw.as_ref().map(scatter);
         Ok(Self {
             n,
             colptr,
@@ -81,6 +82,7 @@ impl FilterPattern {
             e_i,
             e_w,
             e_m,
+            e_mw,
         })
     }
 
@@ -100,8 +102,9 @@ impl FilterPattern {
     }
 
     /// Sets `a` (from [`Self::new_matrix`]) to the filter at (rho, lambda) and
-    /// `colsq` to its column sums of squares. Without M, the values are
-    /// computed as `1 - rho w`, the same arithmetic as Eigen's `I - rho W`.
+    /// `colsq` to its column sums of squares. With one of W and M, the values
+    /// are `1 - rho w` (or `1 - lambda m`), the same arithmetic as Eigen's
+    /// `I - rho W` in the C++ engine.
     pub fn update(&self, rho: f64, lambda: f64, a: &mut Csc, colsq: &mut [f64]) {
         debug_assert_eq!(a.val.len(), self.nnz());
         debug_assert_eq!(colsq.len(), self.n);
@@ -109,9 +112,15 @@ impl FilterPattern {
         for j in 0..self.n {
             let mut s = 0.0;
             for k in self.colptr[j]..self.colptr[j + 1] {
-                let mut v = self.e_i[k] - rho * self.e_w[k];
-                if let Some((e_m, e_mw)) = &self.e_m {
-                    v = v - lambda * e_m[k] + rl * e_mw[k];
+                let mut v = self.e_i[k];
+                if let Some(e_w) = &self.e_w {
+                    v -= rho * e_w[k];
+                }
+                if let Some(e_m) = &self.e_m {
+                    v -= lambda * e_m[k];
+                }
+                if let Some(e_mw) = &self.e_mw {
+                    v += rl * e_mw[k];
                 }
                 a.val[k] = v;
                 s += v * v;

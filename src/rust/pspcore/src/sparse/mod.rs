@@ -1,9 +1,11 @@
 //! Sparse matrices and spatial operators (plan/06 §6.4, §6.7).
 
+mod chol;
 mod csc;
 mod pattern;
 mod weights;
 
+pub use chol::SparseChol;
 pub use csc::Csc;
 pub use pattern::FilterPattern;
 pub use weights::Weights;
@@ -97,7 +99,8 @@ mod tests {
         let eye = Csc::identity(n).to_dense();
         let (wd, md) = (w.to_dense(), m.to_dense());
         for (with_m, rho, lambda) in [(false, 0.4, 0.0), (true, 0.4, -0.3), (true, -0.9, 0.7)] {
-            let pat = FilterPattern::new(&w, if with_m { Some(&m) } else { None }).unwrap();
+            let pat =
+                FilterPattern::new(n, Some(&w), if with_m { Some(&m) } else { None }).unwrap();
             let mut a = pat.new_matrix();
             let mut colsq = vec![0.0; n];
             pat.update(rho, lambda, &mut a, &mut colsq);

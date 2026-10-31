@@ -13,10 +13,12 @@
     clippy::needless_range_loop
 )]
 
+pub mod dense;
 pub mod dist;
 pub mod error;
 pub mod par;
 pub mod rng;
+pub mod sampler;
 pub mod sparse;
 
 pub use error::PspError;

@@ -1,0 +1,101 @@
+Rust sampler after phase R2 (plan/06 step 24), 2026-10-31.
+Build: branch rust, installed in ~/.cache/panelspatialprobit/lib_rust; same machine
+and scripts as rust_baseline_2026-10-30.txt (C++), one chain on one core.
+
+Per-iteration time, C++ (baseline) -> Rust:
+  SAR binary,  N = 1,000,  T = 10:  1.30 ->  1.37 ms  (+5%)
+  SAR ordered, N = 1,000,  T = 10:  1.63 ->  1.77 ms  (+9%)
+  SEM binary,  N = 1,000,  T = 10:  2.68 ->  2.43 ms  (-9%)
+  SAR binary,  N = 10,000, T = 20: 32.51 -> 33.60 ms  (+3%)
+  SAR ordered, N = 10,000, T = 20: 41.01 -> 44.26 ms  (+8%)
+  SEM binary,  N = 10,000, T = 20: 72.14 -> 74.28 ms  (+3%)
+The §6.2 port target is "within +-10% of C++, never slower by more than 10%".
+Same-build comparisons (options(panelspatialprobit.engine = "cpp"), N = 1,000,
+1,000 + 1,000 iterations; differences within about 5% are run-to-run noise):
+  SAR random effects  cpp 1.71  rust 1.62 ms/iter
+  SAR pooled          cpp 1.45  rust 1.51
+  SEM random effects  cpp 2.88  rust 2.69
+  SEM pooled          cpp 1.86  rust 1.56
+SEM gains from M X being computed once and X'X from three Gram matrices
+(R2), and from applying R'R once to the summed random-effect residuals.
+
+== bench_models.R ==
+panelspatialprobit 0.0.0.9000, R 4.6.0; one chain on one core, times include warm-up
+
+[sar_binary] N = 1000, T = 10 (n = 10000): 10000 iterations in 13.7 s (1.37 ms/iter); ESS/s 29.03-58.22
+    variable ess_bulk ess_per_sec
+ (Intercept)      397       29.03
+          x1      667       48.84
+          x2      507       37.10
+          x3      768       56.19
+          x4      796       58.22
+         rho      604       44.22
+ sigma_alpha      420       30.72
+
+[sar_ordered] N = 1000, T = 10 (n = 10000): 10000 iterations in 17.7 s (1.77 ms/iter); ESS/s 22.73-79.21
+    variable ess_bulk ess_per_sec
+ (Intercept)      401       22.73
+          x1     1064       60.24
+          x2      996       56.44
+          x3     1398       79.21
+          x4     1197       67.80
+         rho     1019       57.71
+ sigma_alpha      766       43.40
+    cut[2|3]      492       27.84
+    cut[3|4]      500       28.32
+
+[sem_binary] N = 1000, T = 10 (n = 10000): 10000 iterations in 24.3 s (2.43 ms/iter); ESS/s 13.82-37.14
+    variable ess_bulk ess_per_sec
+ (Intercept)      901       37.14
+          x1      335       13.82
+          x2      378       15.56
+          x3      475       19.60
+          x4      444       18.32
+      lambda      346       14.26
+ sigma_alpha      350       14.44
+
+[sar_binary] N = 10000, T = 20 (n = 200000): 2000 iterations in 67.2 s (33.60 ms/iter); ESS/s 0.28-2.49
+    variable ess_bulk ess_per_sec
+ (Intercept)       60        0.90
+          x1       90        1.34
+          x2       19        0.28
+          x3      131        1.95
+          x4      167        2.49
+         rho      152        2.26
+ sigma_alpha      115        1.71
+
+[sar_ordered] N = 10000, T = 20 (n = 200000): 2000 iterations in 88.5 s (44.26 ms/iter); ESS/s 0.47-3.65
+    variable ess_bulk ess_per_sec
+ (Intercept)       42        0.47
+          x1      283        3.19
+          x2      236        2.66
+          x3      313        3.53
+          x4      257        2.90
+         rho      152        1.71
+ sigma_alpha      323        3.65
+    cut[2|3]       91        1.03
+    cut[3|4]       71        0.80
+
+[sem_binary] N = 10000, T = 20 (n = 200000): 2000 iterations in 148.6 s (74.28 ms/iter); ESS/s 0.08-1.13
+    variable ess_bulk ess_per_sec
+ (Intercept)      169        1.13
+          x1       68        0.46
+          x2       12        0.08
+          x3       78        0.53
+          x4       90        0.60
+      lambda       56        0.37
+ sigma_alpha       50        0.34
+
+
+== bench_large.R ==
+N = 10000, T = 20, k = 5 (n = 200000): 2000 iterations in 67 s (33.7 ms/iter, including the log-determinant grid, sparse); 10,000 iterations would take about 5.6 min. 
+Impacts (50 draws, stochastic diagonals): 23 s
+
+    variable   mean truth ess_bulk
+ (Intercept) -0.007   0.0       60
+          x1  0.995   1.0       90
+          x2 -0.992  -1.0       19
+          x3  0.505   0.5      131
+          x4  0.502   0.5      167
+         rho  0.492   0.5      152
+ sigma_alpha  0.690   0.7      115

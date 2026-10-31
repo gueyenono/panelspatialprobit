@@ -14,6 +14,7 @@ pub struct Printer {
     label: String,
     total: usize,
     printed: Vec<usize>,
+    warmup: Option<usize>,
 }
 
 impl Printer {
@@ -22,7 +23,16 @@ impl Printer {
             label: label.to_string(),
             total: total.max(1),
             printed: vec![0; tasks],
+            warmup: None,
         }
+    }
+
+    /// MCMC progress: "Chain c: x% (warm-up)" or "(sampling)", as the C++
+    /// engine printed it, now also for chains run in parallel.
+    pub fn mcmc(chains: usize, warmup: usize, iter: usize) -> Self {
+        let mut p = Self::new("Chain", chains, warmup + iter);
+        p.warmup = Some(warmup);
+        p
     }
 
     fn report(&mut self, p: &Progress) {
@@ -30,7 +40,15 @@ impl Printer {
             let tenths = (10 * p.get(t).min(self.total)) / self.total;
             if tenths > self.printed[t] {
                 self.printed[t] = tenths;
-                savvy::io::r_print(&format!("{} {}: {}%", self.label, t + 1, 10 * tenths), true);
+                let msg = match self.warmup {
+                    None => format!("{} {}: {}%", self.label, t + 1, 10 * tenths),
+                    Some(w) => {
+                        let it = tenths * (self.total / 10).max(1);
+                        let phase = if it <= w { "warm-up" } else { "sampling" };
+                        format!("{} {}: {:3}% ({phase})", self.label, t + 1, 10 * tenths)
+                    }
+                };
+                savvy::io::r_print(&msg, true);
             }
         }
     }

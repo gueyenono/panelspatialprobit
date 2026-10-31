@@ -19,9 +19,11 @@ mod run;
 
 use pspcore::dist::{dnorm, pnorm, qnorm_std, rtnorm};
 use pspcore::rng::{RMrg32k3a, Rng};
+use pspcore::sampler::{cut_kernel, run_chain, ChainOutput};
 use pspcore::sparse::FilterPattern;
 use savvy::{
-    savvy, IntegerSexp, ListSexp, OwnedIntegerSexp, OwnedListSexp, OwnedRealSexp, RealSexp, Sexp,
+    savvy, IntegerSexp, ListSexp, NotAvailableValue, OwnedIntegerSexp, OwnedListSexp,
+    OwnedRealSexp, RealSexp, Sexp,
 };
 
 fn rng_from_seed(seed: IntegerSexp) -> savvy::Result<RMrg32k3a> {
@@ -169,8 +171,8 @@ fn psp_rs_filter(
         .ok()
         .filter(|&t| t < w.periods())
         .ok_or_else(|| savvy::Error::new("`t` is out of range"))?;
-    let pat =
-        FilterPattern::new(w.at(t), m.as_ref().map(|m| m.at(t))).map_err(savvy::Error::new)?;
+    let pat = FilterPattern::new(w.n(), Some(w.at(t)), m.as_ref().map(|m| m.at(t)))
+        .map_err(savvy::Error::new)?;
     let mut a = pat.new_matrix();
     let mut colsq = vec![0.0; pat.n];
     pat.update(rho, lambda, &mut a, &mut colsq);
@@ -245,4 +247,122 @@ fn psp_rs_dummy_job(
     let printer = progress.then(|| run::Printer::new("Task", tasks, iters));
     let out = run::run_tasks(tasks, threads, task, printer)?;
     Ok(OwnedRealSexp::try_from_slice(&out)?.into())
+}
+
+fn real_matrix(x: &[f64], nrow: usize, ncol: usize) -> savvy::Result<OwnedRealSexp> {
+    let mut out = OwnedRealSexp::try_from_slice(x)?;
+    out.set_dim(&[nrow, ncol])?;
+    Ok(out)
+}
+
+fn chain_list(o: ChainOutput, has_re: bool) -> savvy::Result<OwnedListSexp> {
+    let mut out = OwnedListSexp::new(8, true)?;
+    let n_units = o.alpha_mean.len();
+    out.set_name_and_value(0, "draws", real_matrix(&o.draws, o.nsave, o.n_par)?)?;
+    out.set_name_and_value(1, "z_mean", OwnedRealSexp::try_from_slice(&o.z_mean)?)?;
+    out.set_name_and_value(
+        2,
+        "alpha_mean",
+        OwnedRealSexp::try_from_slice(&o.alpha_mean)?,
+    )?;
+    out.set_name_and_value(3, "alpha_sd", OwnedRealSexp::try_from_slice(&o.alpha_sd)?)?;
+    let acc: Vec<f64> = o
+        .cut_accept
+        .iter()
+        .map(|&a| if a.is_nan() { f64::na() } else { a })
+        .collect();
+    out.set_name_and_value(4, "cut_accept", OwnedRealSexp::try_from_slice(&acc)?)?;
+    out.set_name_and_value(5, "cut_step", OwnedRealSexp::try_from_slice(&o.cut_step)?)?;
+    let cols = if has_re { n_units } else { 0 };
+    let ad = if has_re { &o.alpha_draws[..] } else { &[][..] };
+    out.set_name_and_value(6, "alpha_draws", real_matrix(ad, o.n_alpha, cols)?)?;
+    out.set_name_and_value(7, "v_mean", OwnedRealSexp::try_from_slice(&o.v_mean)?)?;
+    Ok(out)
+}
+
+/// Runs the MCMC chains (replaces `psp_sampler_cpp` and `mcmapply`): chain c
+/// starts from column c of `seeds`, and up to `threads` chains run at once.
+/// The draws do not depend on `threads`.
+///
+/// @param model Data, weights and flags from `.psp_rs_model()`.
+/// @param spec Priors, grids, MCMC settings and starting values.
+/// @param seeds 6 x chains integer matrix of L'Ecuyer-CMRG seeds.
+/// @param threads Chains run at once.
+/// @param progress Print progress.
+/// @return A list of chains, each with the fields of the C++ engine's result.
+/// @noRd
+#[savvy]
+fn psp_rs_sample(
+    model: ListSexp,
+    spec: ListSexp,
+    seeds: IntegerSexp,
+    threads: i32,
+    progress: bool,
+) -> savvy::Result<Sexp> {
+    let inp = convert::sampler_input(&model, &spec)?;
+    let seeds = seeds.as_slice();
+    if seeds.is_empty() || seeds.len() % 6 != 0 {
+        return Err(savvy::Error::new("`seeds` must have 6 rows"));
+    }
+    let chains = seeds.len() / 6;
+    let rngs = seeds
+        .chunks(6)
+        .map(|s| {
+            let s: [i32; 6] = s.try_into().map_err(|_| savvy::Error::new("bad seed"))?;
+            RMrg32k3a::from_seed(s).map_err(savvy::Error::new)
+        })
+        .collect::<savvy::Result<Vec<_>>>()?;
+    let task = |c: usize, ctx: &pspcore::par::TaskCtx| {
+        let mut rng = rngs[c].clone();
+        run_chain(&inp, &mut rng, ctx)
+    };
+    let printer = progress.then(|| run::Printer::mcmc(chains, inp.warmup, inp.iter));
+    let outs = run::run_tasks(chains, count(threads)?, task, printer)?;
+    let mut res = OwnedListSexp::new(chains, false)?;
+    for (c, o) in outs.into_iter().enumerate() {
+        res.set_value(c, chain_list(o, inp.has_re)?)?;
+    }
+    Ok(res.into())
+}
+
+/// The cut-point updates on a toy ordered model, for `test-cutmove.R`
+/// (replaces `psp_cut_kernel_cpp`, with an explicit seed).
+///
+/// @noRd
+#[savvy]
+#[allow(clippy::too_many_arguments)]
+fn psp_rs_cut_kernel(
+    y: IntegerSexp,
+    mu: RealSexp,
+    z: RealSexp,
+    kappa_free: RealSexp,
+    n_cat: i32,
+    kmean: f64,
+    ksd: f64,
+    step: f64,
+    reps: i32,
+    ac: bool,
+    mv: bool,
+    seed: IntegerSexp,
+) -> savvy::Result<Sexp> {
+    let mut rng = rng_from_seed(seed)?;
+    let (kappa, z) = cut_kernel(
+        &mut rng,
+        y.as_slice(),
+        mu.as_slice(),
+        z.as_slice(),
+        kappa_free.as_slice(),
+        count(n_cat)?,
+        kmean,
+        ksd,
+        step,
+        count(reps)?,
+        ac,
+        mv,
+    )
+    .map_err(savvy::Error::new)?;
+    let mut out = OwnedListSexp::new(2, true)?;
+    out.set_name_and_value(0, "kappa", OwnedRealSexp::try_from_slice(&kappa)?)?;
+    out.set_name_and_value(1, "z", OwnedRealSexp::try_from_slice(&z)?)?;
+    Ok(out.into())
 }

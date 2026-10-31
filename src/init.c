@@ -39,6 +39,11 @@ SEXP handle_result(SEXP res_) {
     return (SEXP)res;
 }
 
+SEXP savvy_psp_rs_cut_kernel__impl(SEXP c_arg__y, SEXP c_arg__mu, SEXP c_arg__z, SEXP c_arg__kappa_free, SEXP c_arg__n_cat, SEXP c_arg__kmean, SEXP c_arg__ksd, SEXP c_arg__step, SEXP c_arg__reps, SEXP c_arg__ac, SEXP c_arg__mv, SEXP c_arg__seed) {
+    SEXP res = savvy_psp_rs_cut_kernel__ffi(c_arg__y, c_arg__mu, c_arg__z, c_arg__kappa_free, c_arg__n_cat, c_arg__kmean, c_arg__ksd, c_arg__step, c_arg__reps, c_arg__ac, c_arg__mv, c_arg__seed);
+    return handle_result(res);
+}
+
 SEXP savvy_psp_rs_dummy_job__impl(SEXP c_arg__tasks, SEXP c_arg__threads, SEXP c_arg__iters, SEXP c_arg__seed, SEXP c_arg__progress) {
     SEXP res = savvy_psp_rs_dummy_job__ffi(c_arg__tasks, c_arg__threads, c_arg__iters, c_arg__seed, c_arg__progress);
     return handle_result(res);
@@ -69,6 +74,11 @@ SEXP savvy_psp_rs_rtnorm__impl(SEXP c_arg__n, SEXP c_arg__mean, SEXP c_arg__sd, 
     return handle_result(res);
 }
 
+SEXP savvy_psp_rs_sample__impl(SEXP c_arg__model, SEXP c_arg__spec, SEXP c_arg__seeds, SEXP c_arg__threads, SEXP c_arg__progress) {
+    SEXP res = savvy_psp_rs_sample__ffi(c_arg__model, c_arg__spec, c_arg__seeds, c_arg__threads, c_arg__progress);
+    return handle_result(res);
+}
+
 SEXP savvy_psp_rs_weights_apply__impl(SEXP c_arg__w, SEXP c_arg__v) {
     SEXP res = savvy_psp_rs_weights_apply__ffi(c_arg__w, c_arg__v);
     return handle_result(res);
@@ -76,12 +86,14 @@ SEXP savvy_psp_rs_weights_apply__impl(SEXP c_arg__w, SEXP c_arg__v) {
 
 
 static const R_CallMethodDef CallEntries[] = {
+    {"savvy_psp_rs_cut_kernel__impl", (DL_FUNC) &savvy_psp_rs_cut_kernel__impl, 12},
     {"savvy_psp_rs_dummy_job__impl", (DL_FUNC) &savvy_psp_rs_dummy_job__impl, 5},
     {"savvy_psp_rs_filter__impl", (DL_FUNC) &savvy_psp_rs_filter__impl, 6},
     {"savvy_psp_rs_next_stream__impl", (DL_FUNC) &savvy_psp_rs_next_stream__impl, 2},
     {"savvy_psp_rs_norm_fun__impl", (DL_FUNC) &savvy_psp_rs_norm_fun__impl, 4},
     {"savvy_psp_rs_rng__impl", (DL_FUNC) &savvy_psp_rs_rng__impl, 4},
     {"savvy_psp_rs_rtnorm__impl", (DL_FUNC) &savvy_psp_rs_rtnorm__impl, 6},
+    {"savvy_psp_rs_sample__impl", (DL_FUNC) &savvy_psp_rs_sample__impl, 5},
     {"savvy_psp_rs_weights_apply__impl", (DL_FUNC) &savvy_psp_rs_weights_apply__impl, 2},
     {NULL, NULL, 0}
 };

@@ -152,6 +152,36 @@ impl Csc {
         })
     }
 
+    /// The transpose, with sorted row indices.
+    pub fn transpose(&self) -> Csc {
+        let mut count = vec![0usize; self.n_rows + 1];
+        for &i in &self.rowind {
+            count[i + 1] += 1;
+        }
+        for i in 0..self.n_rows {
+            count[i + 1] += count[i];
+        }
+        let colptr = count.clone();
+        let mut next = count;
+        let mut rowind = vec![0; self.nnz()];
+        let mut val = vec![0.0; self.nnz()];
+        for j in 0..self.n_cols {
+            for (i, v) in self.col(j) {
+                let p = next[i];
+                rowind[p] = j;
+                val[p] = v;
+                next[i] += 1;
+            }
+        }
+        Csc {
+            n_rows: self.n_cols,
+            n_cols: self.n_rows,
+            colptr,
+            rowind,
+            val,
+        }
+    }
+
     /// The dense column-major copy, for tests.
     pub fn to_dense(&self) -> Vec<f64> {
         let mut d = vec![0.0; self.n_rows * self.n_cols];

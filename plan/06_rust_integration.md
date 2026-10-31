@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0 and R1 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R2 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0, R1 and R2 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R3 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -504,16 +504,16 @@ One step per row, in the order to do them.
 | 12 | R1 | `sparse` (CSC, weights, pattern updates) and the R helpers `.psp_csc()` and `.psp_rs_weights()`. *Done 2026-10-31 (`test-rust-sparse.R`): `I - rho W` identical to Matrix, `(I - lambda M)(I - rho W)` within 1e-14.* | 9 | Claude |
 | 13 | R1 | `par` and `pspr::run`: worker pool, cancel flag, interrupt polling, progress; interrupt check with `SIGINT`. *Done 2026-10-31 (`test-rust-par.R`, `validation/rust_port/check_interrupt.R`): a 4-thread job stops 2 ms after SIGINT with an R `interrupt` condition and no threads left.* | 9 | Claude |
 | 14 | R1 | miri on `rng`, `dist` and `sparse`; R1 exit. *Done 2026-10-31: no findings (nightly toolchain with miri, `-Zmiri-deterministic-floats`); R1 exit met.* | 11, 12, 13 | Claude |
-| 15 | R2 | Cross-build harness `validation/rust_port/`: `lib_cpp` against the branch build, in separate R processes with the same seeds | 3, 14 | Claude |
-| 16 | R2 | Switch `.psp_fit` to `psp_rs_sample()` and port binary SAR/SLX/none with pooled and diagonal RE; unported variants stop with "not yet ported" on the branch | 15 | Claude |
-| 17 | R2 | Ordered outcomes, both cut-point samplers, scale move; `psp_rs_cut_kernel()` replaces `psp_cut_kernel_cpp` in `test-cutmove.R` | 16 | Claude |
-| 18 | R2 | t errors | 17 | Claude |
-| 19 | R2 | SDM (design path only) | 18 | Claude |
-| 20 | R2 | SEM, SDEM and SARAR (lambda, sparse RE block) | 19 | Claude |
-| 21 | R2 | Spatial random effects (phi) | 20 | Claude |
-| 22 | R2 | Time-varying weights | 21 | Claude |
-| 23 | R2 | Latent AR | 22 | Claude |
-| 24 | R2 | Full testthat suite with `NOT_CRAN=true`; `bench_models.R` against step 4; the SBC smoke subset; interrupt, progress and `mclapply` checks; R2 exit | 23 | Claude |
+| 15 | R2 | Cross-build harness `validation/rust_port/`: `lib_cpp` against the branch build, in separate R processes with the same seeds. *Done 2026-10-31: `validation/rust_port/compare_sampler.R` (with `cases.R`, `fit_cases.R`): 17 same-draw cases and 8 sparse random-effects cases.* | 3, 14 | Claude |
+| 16 | R2 | Switch `.psp_fit` to `psp_rs_sample()` and port binary SAR/SLX/none with pooled and diagonal RE; unported variants stop with "not yet ported" on the branch. *Done 2026-10-31. Unported variants ran on the C++ engine instead of stopping (`.psp_engine()`), so the branch stayed green; every variant runs on Rust since step 21. Same draws as C++ to 1e-11.* | 15 | Claude |
+| 17 | R2 | Ordered outcomes, both cut-point samplers, scale move; `psp_rs_cut_kernel()` replaces `psp_cut_kernel_cpp` in `test-cutmove.R`. *Done 2026-10-31 (same draws as C++, both cut-point samplers; `test-cutmove.R` on `psp_rs_cut_kernel()`).* | 16 | Claude |
+| 18 | R2 | t errors. *Done 2026-10-31 (same draws as C++).* | 17 | Claude |
+| 19 | R2 | SDM (design path only). *Done 2026-10-31 (same draws as C++).* | 18 | Claude |
+| 20 | R2 | SEM, SDEM and SARAR (lambda, sparse RE block). *Done 2026-10-31: pooled SEM/SDEM/SARAR give the same draws as C++; with random effects (sparse precision, faer simplicial Cholesky with AMD) posterior means agree within 2.1 MCSE (4,000 iterations).* | 19 | Claude |
+| 21 | R2 | Spatial random effects (phi). *Done 2026-10-31 (posterior means within 2.4 MCSE, also with t errors).* | 20 | Claude |
+| 22 | R2 | Time-varying weights. *Done 2026-10-31 (same draws as C++; with sparse random effects within 0.5 MCSE).* | 21 | Claude |
+| 23 | R2 | Latent AR. *Done 2026-10-31 (same draws as C++ for SAR random effects and pooled SEM; SEM random effects within 1.5 MCSE).* | 22 | Claude |
+| 24 | R2 | Full testthat suite with `NOT_CRAN=true`; `bench_models.R` against step 4; the SBC smoke subset; interrupt, progress and `mclapply` checks; R2 exit. *Done 2026-10-31: see "R2 results" below; R2 exit met.* | 23 | Claude |
 | 25 | R3 | Choose how users set the post-processing threads (recommended: `fit$control$cores`, overridable with `options(panelspatialprobit.threads = )`) | — | You |
 | 26 | R3 | Move the current R reduced form, impacts and predict code to `R/reference_postproc.R`; start `test-postproc-oracle.R` | 24 | Claude |
 | 27 | R3 | Log-determinant grids (sparse; eigen grid evaluation) | 24 | Claude |
@@ -606,6 +606,16 @@ Port in this order, each with its cross-build check (§6.7) before the next:
 - `bench_models.R` per-iteration time within ±10% of C++ (or faster) for SAR, ordered SAR and SEM;
 - the SBC smoke subset passes;
 - the interrupt, progress and `mclapply` checks (§6.10 layer 6) pass.
+
+**R2 results (2026-10-31):**
+
+- **Engine switch.** `.psp_fit` builds `.psp_rs_model()` and a settings list and calls `psp_rs_sample()`; the C++ chain runner is kept as `.psp_run_cpp()`, used only when `options(panelspatialprobit.engine = "cpp")` (comparisons; removed in R5). Unported variants ran on C++ while the port went on, instead of stopping, so the branch stayed green throughout. Chains now run in parallel on every OS (`cores`), capped at 2 under `_R_CHECK_LIMIT_CORES_` (`.psp_threads()`).
+- **Same draws.** `validation/rust_port/compare_sampler.R`: 17 cases give the C++ draws to at most 9e-12 (relative): SAR, SLX, none and SDM (pooled, random), missing outcomes, ordered with both cut-point samplers, t errors, pooled SEM, SDEM and SARAR, time-varying W, latent AR (with and without an error term), lagged outcomes.
+- **Sparse random effects** (SEM, SDEM, SARAR with random effects; spatial random effects; with t errors, time-varying M and latent AR): faer's simplicial Cholesky with AMD ordering, symbolic analysis once per chain. Draws differ from C++ (another ordering), and posterior means over 4,000 iterations agree within 2.2 MCSE in all 8 cases. For t errors, P is assembled from precomputed contributions d_i R_ia R_ib, with no sparse products.
+- **Tests.** The full suite with `NOT_CRAN=true` passes on the Rust sampler, including the comparison with the pure-R reference sampler for every variant. `test-cutmove.R` uses `psp_rs_cut_kernel()`.
+- **Speed** (`validation/bench/rust_r2_2026-10-31.txt`): per iteration, C++ -> Rust: SAR 1.30 -> 1.37 ms (+5%), ordered 1.63 -> 1.77 (+9%), SEM 2.68 -> 2.43 (-9%); at N = 10,000, T = 20: SAR 32.5 -> 33.6 (+3%), ordered 41.0 -> 44.3 (+8%), SEM 72.1 -> 74.3 (+3%). Within the ±10% port target. Two changes made SEM faster than the C++: M X is computed once (only a latent AR lag column is refreshed), and without t weights X̃'X̃ comes from the Gram matrices X'X, X'MX and (MX)'MX; the random-effect right-hand side applies R'R once to the summed residuals when M is time-invariant. Dot products use four partial sums (vectorised), as Eigen's do.
+- **SBC smoke subset** (100 replications: `sar_re_ord4`, `sarar_re_ord3`, `sar_sre_bin`, `sarar_t_re_ord3`, `sem_lat_re_ord3`): no rank test below the multiple-testing threshold (smallest p = 0.011 of 33); the three variants with p < 0.05 were rerun with `SBC_SEED_OFFSET=1` and 300 replications, all p > 0.05.
+- **Threads, interrupts, fork** (`validation/rust_port/check_fit_threads.R`): Ctrl-C during a 4-chain, 4-thread fit stops within 0.1 s with an R interrupt and no threads left; progress is printed for every parallel chain; `psprobit()` inside `mclapply()` gives the parent's draws; `cores = 4` equals `cores = 1`. On this machine a forked child that calls `eigen()` after the parent did deadlocks in the BLAS (also in plain R, with no package code), so the check uses the sparse log-determinant; the C++ engine's `mcmapply` path had the same exposure.
 
 ### R3: Post-processing (L)
 
