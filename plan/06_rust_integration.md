@@ -574,6 +574,7 @@ Steps 10-14.
 **R1 results (2026-10-31):**
 
 - **Exactness.** Every generator and normal function matches R bit for bit on x86_64 (`test-rng.R`; Rust known-answer tests in `pspcore/tests/r_reference.rs`). On other architectures `test-rng.R` compares to 1e-13, because a C compiler may fuse multiply-adds in R's own code (Apple clang does by default).
+- **Cross-build exactness.** On GitHub's Ubuntu runners the Rust and C++ truncated normal draws differ in the last bit in the uniform-rejection branch: R's compiler flags there let g++ fuse `a + (b - a) * u` into a multiply-add, which Rust never does (R's own nmath was not affected: `test-rng.R` is exact there). The in-package Rust/C++ comparison therefore uses a 1e-14 tolerance, and the R2 cross-build checks compare with tolerances (§6.10), never bit for bit.
 - **Registration.** `src/registration.c` now compiles savvy's `init.c` itself and copies its `CallEntries` at load time, so new `#[savvy]` functions need no manual edit; `src/Makevars.in` lists `OBJECTS` without `init.o` (this replaces the R0 `PKG_CPPFLAGS` rename).
 - **Interrupt test harness.** A child started with `&` from a non-interactive shell inherits SIGINT as ignored, and R keeps that; `check_interrupt.R` forks with `parallel::mcparallel` instead, which also exercises Rust after `fork()`.
 - **Authorship.** `tools/rust_authors.R` writes `inst/AUTHORS` (72 crates) from `cargo metadata`; `inst/COPYRIGHTS` lists the R Core code ported to Rust; `Authors@R` has both copyright-holder entries.
