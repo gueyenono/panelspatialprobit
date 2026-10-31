@@ -15,7 +15,7 @@ The design and roadmap are in `plan/`:
 | `plan/03_package_architecture.md` | API and layout |
 | `plan/04_validation_and_testing.md` | Testing |
 | `plan/05_roadmap.md` | Phases and checklists |
-| `plan/06_rust_integration.md` | Rust migration (decided 2026-10-30, not started) |
+| `plan/06_rust_integration.md` | Rust migration (decided 2026-10-30; R0 under way on branch `rust`, C++ reference tagged `cpp-final`) |
 
 Read the relevant plan file before changing a sampler block. `literature/` and `related_packages/` hold reference papers and third-party package sources; both are excluded from the build.
 
@@ -95,9 +95,7 @@ Phases 1–6 and vignettes (7.1) are done; `R CMD check --as-cran` gives 1 NOTE 
 
 1. **Git setup** (Phase 0). Done 2026-10-30: `safe.directory` is set, and the repository is on GitHub with remote `origin`. Do not change the global git config on the user's behalf. Commit or push only when asked.
 2. **Author details** (Phase 0, 7.3). Replace the placeholder `person("Package", "Author", ...)` in `DESCRIPTION` (`Authors@R`; add an ORCID if wanted) and in `inst/CITATION` (both `author` and `textVersion`). Once the paper exists, add it to `inst/CITATION`.
-3. **Repository URLs** (7.3). Done 2026-10-30: `url:` in `_pkgdown.yml` and `URL:`/`BugReports:` in `DESCRIPTION` point to `gueyenono/panelspatialprobit` and its GitHub Pages site. Still open:
-   - check that the three workflows in `.github/workflows/` (R-CMD-check, test-coverage, pkgdown) pass. On their first run (commit `05391bb`) R-CMD-check and test-coverage passed; pkgdown failed on `psp_t` missing from the reference index, since fixed;
-   - turn on GitHub Pages for the `gh-pages` branch (repository settings), so the site URL resolves.
+3. **Repository URLs** (7.3). Done 2026-10-30: `url:` in `_pkgdown.yml` and `URL:`/`BugReports:` in `DESCRIPTION` point to `gueyenono/panelspatialprobit` and its GitHub Pages site. The three workflows in `.github/workflows/` pass (commit `968ea92`); the pkgdown workflow deletes `CLAUDE.md` before building, because pkgdown renders every top-level `.md` file. GitHub Pages serves the `gh-pages` branch at that URL (enabled 2026-10-30).
 4. **Empirical example data** (7.2). Choose the dataset(s) from `plan/04` §4.6:
    - binary: the Elhorst et al. (2017) inflation-targeting panel, CC-BY 4.0;
    - ordered: US Drought Monitor, after checking its redistribution terms.

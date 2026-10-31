@@ -12,7 +12,7 @@ The work is split into phases, each with concrete tasks and an **exit criterion*
 - [~] `use_roxygen_md()`, `use_testthat(3)`, `use_rcpp_eigen()` (or `use_rcpp()` + LinkingTo), `use_news_md()`, `use_readme_rmd()`, `use_pkgdown()`. *Status: roxygen markdown, testthat 3, RcppEigen, NEWS and vignettes are set up by hand; README is plain Markdown; no pkgdown yet.*
 - [x] Add a "hello sparse" C++ function: maps a `dgCMatrix` and returns `W %*% x`, to prove the toolchain works. *Status: superseded by the sampler itself, which maps `dgCMatrix` weights.*
 - [x] `.Rbuildignore` / `.gitignore` as in `03` §3.5.
-- [~] GitHub Actions: `R-CMD-check` (3 OS × 3 R versions), `test-coverage`, `pkgdown`. *Status: all three workflows are written under `.github/workflows/`; they first ran on 2026-10-30 (commit `05391bb`).*
+- [x] GitHub Actions: `R-CMD-check` (3 OS × 3 R versions), `test-coverage`, `pkgdown`. *Status: all three workflows are under `.github/workflows/` and pass since 2026-10-30 (commit `968ea92`). R-CMD-check runs Linux on R devel, release and oldrel-1, and macOS and Windows on release.*
 - [x] Re-run `/init` to generate CLAUDE.md. It should cover build/test commands, the stacking convention, the $Az - b$ abstraction and the SBC gate.
 - [ ] Obtain the paywalled papers listed in "Reading to obtain" below.
 

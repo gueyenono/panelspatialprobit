@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date; implementation not started. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0 started 2026-10-30: steps 1 and 2 are done (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`). Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -479,8 +479,8 @@ One step per row, in the order to do them.
 
 | # | Phase | Step | After | Who |
 |---|---|---|---|---|
-| 1 | R0 | Check that the first CI run on `master` (C++ version, commit `05391bb`) passes, and fix it if not, so later failures can be blamed on Rust alone | — | Claude |
-| 2 | R0 | Tag the result `cpp-final` and create the branch `rust` from it | 1 | You, or Claude when asked |
+| 1 | R0 | Check that the first CI run on `master` (C++ version, commit `05391bb`) passes, and fix it if not, so later failures can be blamed on Rust alone. *Done 2026-10-30: all three workflows pass on `968ea92`, after the pkgdown fixes.* | — | Claude |
+| 2 | R0 | Tag the result `cpp-final` and create the branch `rust` from it. *Done 2026-10-30: `cpp-final` is the commit that records steps 1 and 2 (code identical to `968ea92`).* | 1 | You, or Claude when asked |
 | 3 | R0 | Install `cpp-final` into a scratch library `lib_cpp`: the frozen reference | 2 | Claude |
 | 4 | R0 | Record the C++ baseline: `bench_models.R`, `bench_large.R`, a callgrind profile of the sampler blocks (`validation/bench/rust_baseline_<date>.txt`) | 3 | Claude |
 | 5 | R0 | Workspace skeleton: `pspcore`, `pspr`, `configure`/`configure.win`/`cleanup`, `Makevars.in`/`Makevars.win.in`, savvy wrappers, one exported function; `.gitignore` and `.Rbuildignore` entries; `SystemRequirements` and `Depends: R (>= 4.5)` | 2 | Claude |
@@ -529,8 +529,8 @@ One step per row, in the order to do them.
 Steps 1-9.
 
 - [x] Maintainer answers R-D1, R-D7 and R-D8. *Decided 2026-10-30: savvy, Rust 1.84, Rust before the first CRAN submission.*
-- [ ] The first CI run on `master` (C++ version) passes, or its failures are fixed first.
-- [ ] Tag the passing commit `cpp-final`; branch `rust` from it; install it into `lib_cpp` (scratch library). Tags, commits and pushes are made by the maintainer, or by Claude on request.
+- [x] The first CI run on `master` (C++ version) passes, or its failures are fixed first. *Done 2026-10-30: R-CMD-check and test-coverage passed on the first run; pkgdown failed (`psp_t` missing from the reference index) and passes since `968ea92`, which is the commit to tag.*
+- [~] Tag the passing commit `cpp-final`; branch `rust` from it; install it into `lib_cpp` (scratch library). Tags, commits and pushes are made by the maintainer, or by Claude on request. *Status: tag and branch made 2026-10-30; `lib_cpp` not installed yet.*
 - [ ] Profile the C++ sampler (`valgrind --tool=callgrind` on `bench_models.R` cases) and record the per-block breakdown and the baseline benchmark file. This can run alongside the skeleton work.
 - [ ] Workspace skeleton: `pspcore`, `pspr`, `configure`/`configure.win`/`cleanup`, `Makevars.in`/`Makevars.win.in`, savvy wrappers, one exported function (e.g. `psp_rs_rng("unif", ...)`).
 - [ ] Measure the build options: `codegen-units` 1 vs 16 and `lto` off/thin/fat, against install time and the speed of a toy kernel. Record the installed size.

@@ -16,7 +16,7 @@ The survey in `../related_packages/README.md` and `../literature/README.md` foun
 | [`03_package_architecture.md`](03_package_architecture.md) | User API and methods, data pipeline, file layout, R/C++ split, dependencies, repo and tooling conventions. |
 | [`04_validation_and_testing.md`](04_validation_and_testing.md) | Unit tests; **simulation-based calibration as the release gate**; Monte Carlo design; cross-package checks; benchmarks; empirical examples. |
 | [`05_roadmap.md`](05_roadmap.md) | Phases 0–7 with task checklists and exit criteria; risk register; reading list per phase. |
-| [`06_rust_integration.md`](06_rust_integration.md) | Decided 2026-10-30 (savvy, Rust 1.84, Rust before the first CRAN submission), not started: moving the sampler and post-processing from C++ and R loops to Rust; measured baselines, decisions R-D1 to R-D10, phases R0–R7. |
+| [`06_rust_integration.md`](06_rust_integration.md) | Decided 2026-10-30 (savvy, Rust 1.84, Rust before the first CRAN submission); R0 under way on branch `rust` (C++ reference tagged `cpp-final`): moving the sampler and post-processing from C++ and R loops to Rust; measured baselines, decisions R-D1 to R-D10, phases R0–R7. |
 
 ## The plan in one paragraph
 
