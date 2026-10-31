@@ -1,0 +1,64 @@
+# Checks the Rust workspace in src/rust (plan/06 §6.9): formatting, clippy,
+# the pspcore unit tests, dependency licences, and a build with the minimum
+# supported Rust version (R-D7).
+on:
+  push:
+    branches: [main, master, rust]
+  pull_request:
+
+name: rust
+
+permissions: read-all
+
+defaults:
+  run:
+    working-directory: src/rust
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          rustup component add rustfmt clippy
+          rustc --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/rust
+
+      - name: Format
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+
+      - name: Unit tests
+        run: cargo test --locked -p pspcore
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: Licences
+        run: cargo deny --locked check licenses
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain 1.84
+        run: |
+          rustup toolchain install 1.84 --profile minimal
+          rustc +1.84 --version
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/rust
+          key: msrv
+
+      - name: Build
+        run: cargo +1.84 build --locked --release -p pspr

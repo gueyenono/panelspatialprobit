@@ -1,0 +1,9 @@
+# cargo deny check licenses (CI `rust` job): every dependency must be usable
+# under a licence compatible with the package's GPL (>= 3) (plan/06 §6.9).
+# The workspace crates themselves are unpublished and skipped.
+[licenses]
+allow = ["MIT", "Unicode-3.0"]
+confidence-threshold = 0.9
+
+[licenses.private]
+ignore = true

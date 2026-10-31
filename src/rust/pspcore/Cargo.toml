@@ -1,0 +1,11 @@
+[package]
+name = "pspcore"
+description = "Numerical core of panelspatialprobit: R-compatible random numbers, sparse operators, the MCMC sampler and post-processing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+faer.workspace = true

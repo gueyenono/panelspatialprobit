@@ -11,3 +11,14 @@
 ^docs$
 ^pkgdown$
 ^paper$
+^src/rust/target$
+^src/rust/vendor$
+^src/\.cargo$
+^src/Makevars$
+^src/Makevars\.win$
+^rust-dev$
+^tools/vendor\.sh$
+^cran-comments\.md$
+^src/rust/deny\.toml$
+^src/rust/\.cargo$
+^src/rust/pspr/api\.h$

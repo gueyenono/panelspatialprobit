@@ -1,0 +1,8 @@
+# Copied to src/.cargo/config.toml for builds from the vendored crates
+# (src/rust/vendor.tar.xz, written by tools/vendor.sh). The directory is
+# relative to src/, the parent of that .cargo directory.
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "rust/vendor"

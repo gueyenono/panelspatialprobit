@@ -1,0 +1,33 @@
+# src/Makevars is generated from this file by ./configure (plan/06 §6.9).
+
+CARGO_DIR = @CARGO_DIR@
+TARGET_DIR = @TARGET_DIR@
+LIBDIR = $(TARGET_DIR)/release
+STATLIB = $(LIBDIR)/libpspr.a
+
+# registration.c registers the Rcpp and savvy routines together until the
+# C++ engine is removed (plan/06 R5); this renames savvy's own R_init.
+PKG_CPPFLAGS = -DR_init_panelspatialprobit=psp_savvy_init
+PKG_LIBS = -L$(LIBDIR) -lpspr
+
+all: $(SHLIB) clean_intermediate
+
+$(SHLIB): $(STATLIB)
+
+# cargo decides what to rebuild, so the static library is removed after
+# linking and this rule runs on every build. CC and CFLAGS reach the cc crate,
+# which compiles savvy's C helper.
+$(STATLIB):
+	PATH="$(CARGO_DIR):$${PATH}"; export PATH; \
+	  @CARGO_HOME_SETUP@ \
+	  @VENDOR_STEP@ \
+	  CC="$(CC)"; CFLAGS="$(CFLAGS)"; export CC CFLAGS; \
+	  @BEFORE_CARGO_BUILD@ \
+	  cargo build --lib --release -j 2 --locked @OFFLINE@ \
+	    --manifest-path=rust/Cargo.toml --target-dir="$(TARGET_DIR)"
+
+clean_intermediate: $(SHLIB)
+	rm -f "$(STATLIB)"
+	@CLEAN_VENDOR@
+
+.PHONY: all clean_intermediate

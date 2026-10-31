@@ -7,3 +7,11 @@ src/*.dll
 literature/*.pdf
 related_packages/*/
 validation/**/results/
+src/rust/target/
+src/rust/vendor/
+src/rust/vendor.tar.xz
+src/.cargo/
+src/Makevars
+src/Makevars.win
+src/*.a
+src/rust/pspr/api.h

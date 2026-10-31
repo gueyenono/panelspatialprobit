@@ -1,0 +1,3 @@
+#!/bin/sh
+# Configures the Rust build; see tools/config.sh.
+exec sh tools/config.sh windows

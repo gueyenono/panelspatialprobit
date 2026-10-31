@@ -1,0 +1,30 @@
+# Rust workspace of panelspatialprobit (plan/06 §6.4).
+#   pspcore: pure Rust numerics (no R dependency), tested with `cargo test`.
+#   pspr:    the R binding (savvy), built as the static library the package links.
+[workspace]
+members = ["pspcore", "pspr"]
+# Resolver 3 (cargo >= 1.84) picks dependency versions whose rust-version is
+# at most ours, so Cargo.lock stays buildable with Rust 1.84.
+resolver = "3"
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.84"
+license = "GPL-3.0-or-later"
+publish = false
+
+[workspace.dependencies]
+pspcore = { path = "pspcore" }
+# Pinned exactly: faer is 0.x and its API changes between minor versions (R-D2).
+faer = { version = "=0.24.4", default-features = false, features = ["std", "linalg", "sparse", "sparse-linalg"] }
+# Must match the savvy-cli version that generates R/000-wrappers.R and src/init.c.
+savvy = "=0.11.0"
+
+[profile.release]
+opt-level = 3
+codegen-units = 1
+lto = "thin"
+# Required: savvy turns a panic into an R error; "abort" would end the R session.
+panic = "unwind"
+debug = false

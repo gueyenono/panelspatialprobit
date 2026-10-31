@@ -8,12 +8,26 @@
 \description{
 Bayesian Markov chain Monte Carlo estimation of spatial probit and spatial ordered probit models for panel data. Supports spatial autoregressive, spatial Durbin, spatial lag of X, spatial error and combined specifications with time-invariant or time-varying weights; pooled, random, spatially autocorrelated and correlated random effects; time effects; dynamic models with lagged outcomes (Wooldridge initial conditions) or latent autoregressive dynamics; normal or Student-t errors; and impacts (direct, indirect and total marginal effects) on outcome probabilities. Sampling builds on the data augmentation approach of Albert and Chib (1993) \doi{10.1080/01621459.1993.10476321}, its spatial extension by LeSage (2000) \doi{10.1111/j.1538-4632.2000.tb00413.x} and the panel models of Kakamu and Wago (2005).
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/gueyenono/panelspatialprobit}
+  \item \url{https://gueyenono.github.io/panelspatialprobit/}
+  \item Report bugs at \url{https://github.com/gueyenono/panelspatialprobit/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Package Author \email{nonoghislain@gmail.com}
 
 Authors:
 \itemize{
   \item Package Author \email{nonoghislain@gmail.com}
+}
+
+Other contributors:
+\itemize{
+  \item R Core Team (RNG and nmath code ported to Rust) [copyright holder]
 }
 
 }

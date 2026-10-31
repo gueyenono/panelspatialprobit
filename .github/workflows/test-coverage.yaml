@@ -1,7 +1,7 @@
 # Measures test coverage with covr and uploads it to Codecov.
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, rust]
   pull_request:
 
 name: test-coverage

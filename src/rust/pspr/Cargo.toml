@@ -1,0 +1,15 @@
+[package]
+name = "pspr"
+description = "R binding of pspcore for panelspatialprobit (savvy)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["staticlib", "lib"]
+
+[dependencies]
+pspcore.workspace = true
+savvy.workspace = true

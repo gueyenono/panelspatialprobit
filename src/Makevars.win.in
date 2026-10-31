@@ -1,0 +1,40 @@
+# src/Makevars.win is generated from this file by ./configure.win (plan/06 §6.9).
+
+CARGO_DIR = @CARGO_DIR@
+TARGET = @TARGET@
+TARGET_DIR = @TARGET_DIR@
+LIBDIR = $(TARGET_DIR)/$(TARGET)/release
+STATLIB = $(LIBDIR)/libpspr.a
+
+# registration.c registers the Rcpp and savvy routines together until the
+# C++ engine is removed (plan/06 R5); this renames savvy's own R_init.
+PKG_CPPFLAGS = -DR_init_panelspatialprobit=psp_savvy_init
+PKG_LIBS = -L$(LIBDIR) -lpspr -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll
+
+# Rtools does not put the linker where cargo expects it.
+CARGO_LINKER = x86_64-w64-mingw32.static.posix-gcc.exe
+
+all: $(SHLIB) clean_intermediate
+
+$(SHLIB): $(STATLIB)
+
+# cargo decides what to rebuild, so the static library is removed after
+# linking and this rule runs on every build. The GNU target links proc-macro
+# crates with -lgcc_eh, which Rtools lacks; an empty stand-in satisfies it.
+$(STATLIB):
+	mkdir -p "$(LIBDIR)/libgcc_mock" && touch "$(LIBDIR)/libgcc_mock/libgcc_eh.a"
+	PATH="$(CARGO_DIR):$${PATH}"; export PATH; \
+	  @CARGO_HOME_SETUP@ \
+	  @VENDOR_STEP@ \
+	  CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER="$(CARGO_LINKER)"; \
+	  LIBRARY_PATH="$${LIBRARY_PATH};$(LIBDIR)/libgcc_mock"; \
+	  CC="$(CC)"; CFLAGS="$(CFLAGS)"; \
+	  export CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER LIBRARY_PATH CC CFLAGS; \
+	  cargo build --target $(TARGET) --lib --release -j 2 --locked @OFFLINE@ \
+	    --manifest-path=rust/Cargo.toml --target-dir="$(TARGET_DIR)"
+
+clean_intermediate: $(SHLIB)
+	rm -f "$(STATLIB)"
+	@CLEAN_VENDOR@
+
+.PHONY: all clean_intermediate

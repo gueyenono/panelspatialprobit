@@ -123,16 +123,3 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-
-static const R_CallMethodDef CallEntries[] = {
-    {"_panelspatialprobit_psp_ghk_cpp", (DL_FUNC) &_panelspatialprobit_psp_ghk_cpp, 6},
-    {"_panelspatialprobit_psp_sampler_cpp", (DL_FUNC) &_panelspatialprobit_psp_sampler_cpp, 50},
-    {"_panelspatialprobit_psp_rtnorm_cpp", (DL_FUNC) &_panelspatialprobit_psp_rtnorm_cpp, 5},
-    {"_panelspatialprobit_psp_cut_kernel_cpp", (DL_FUNC) &_panelspatialprobit_psp_cut_kernel_cpp, 11},
-    {NULL, NULL, 0}
-};
-
-RcppExport void R_init_panelspatialprobit(DllInfo *dll) {
-    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
-    R_useDynamicSymbols(dll, FALSE);
-}

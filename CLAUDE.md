@@ -44,6 +44,16 @@ Rscript validation/crosscheck/spatialprobit_ordered.R <lib> [cores] # agreement 
 Rscript validation/bench/bench_models.R <lib>                    # paper Table 5: SAR, ordered SAR and SEM timings and ESS/s (~6 min)
 Rscript validation/wang_kockelman/run_wk.R <reps> <cores> <lib>  # Wang & Kockelman (2009) simulation (~1 h for 50 reps on 7 cores)
 Rscript validation/vignette_data.R                                 # refresh vignettes/validation-*.csv after new SBC / Monte Carlo / benchmark results
+Rscript validation/bench/bench_postproc.R <lib>                  # impacts, predict, PPC, loglik and log-det timings (~20 s)
+```
+
+**Rust (branch `rust`, plan/06).** The package builds the Rust workspace in `src/rust` through `configure` and `src/Makevars.in`. Until phase R5 it still holds the C++ engine too, and `src/registration.c` registers both. The frozen C++ reference (tag `cpp-final`) is installed in `~/.cache/panelspatialprobit/lib_cpp`.
+
+```sh
+export PSP_CARGO_TARGET_DIR=$HOME/.cache/panelspatialprobit/target   # always: keeps cargo's ~1 GB output off the Drive mount and builds incrementally
+(cd src/rust && cargo test -p pspcore && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check)   # cargo is in ~/.cargo/bin
+~/.cache/panelspatialprobit/tools/bin/savvy-cli update . src/rust/pspr   # after changing a #[savvy] function; then add the routine to src/registration.c
+sh tools/vendor.sh   # writes src/rust/vendor.tar.xz (not committed) before R CMD build: R CMD check warns when an install downloads crates
 ```
 
 ## Architecture
@@ -95,7 +105,7 @@ Phases 1–6 and vignettes (7.1) are done; `R CMD check --as-cran` gives 1 NOTE 
 
 1. **Git setup** (Phase 0). Done 2026-10-30: `safe.directory` is set, and the repository is on GitHub with remote `origin`. Do not change the global git config on the user's behalf. Commit or push only when asked.
 2. **Author details** (Phase 0, 7.3). Replace the placeholder `person("Package", "Author", ...)` in `DESCRIPTION` (`Authors@R`; add an ORCID if wanted) and in `inst/CITATION` (both `author` and `textVersion`). Once the paper exists, add it to `inst/CITATION`.
-3. **Repository URLs** (7.3). Done 2026-10-30: `url:` in `_pkgdown.yml` and `URL:`/`BugReports:` in `DESCRIPTION` point to `gueyenono/panelspatialprobit` and its GitHub Pages site. The three workflows in `.github/workflows/` pass (commit `968ea92`); the pkgdown workflow deletes `CLAUDE.md` before building, because pkgdown renders every top-level `.md` file. GitHub Pages serves the `gh-pages` branch at that URL (enabled 2026-10-30).
+3. **Repository URLs** (7.3). Done 2026-10-30: `url:` in `_pkgdown.yml` and `URL:`/`BugReports:` in `DESCRIPTION` point to `gueyenono/panelspatialprobit` and its GitHub Pages site. The three C++-era workflows in `.github/workflows/` pass (commit `968ea92`); the pkgdown workflow deletes `CLAUDE.md` before building, because pkgdown renders every top-level `.md` file. GitHub Pages serves the `gh-pages` branch at that URL (enabled 2026-10-30).
 4. **Empirical example data** (7.2). Choose the dataset(s) from `plan/04` §4.6:
    - binary: the Elhorst et al. (2017) inflation-targeting panel, CC-BY 4.0;
    - ordered: US Drought Monitor, after checking its redistribution terms.

@@ -1,7 +1,7 @@
 # Based on the r-lib/actions example workflow (check-standard).
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, rust]
   pull_request:
 
 name: R-CMD-check
@@ -38,6 +38,25 @@ jobs:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
+
+      # Rust is preinstalled on the runners. R on Windows links with the GNU
+      # toolchain, so cargo needs that target. No cargo cache here, so the
+      # check builds as CRAN does (target and CARGO_HOME inside the build tree).
+      - name: Rust toolchain
+        run: |
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+
+      - name: Rust target for R on Windows
+        if: runner.os == 'Windows'
+        run: rustup target add x86_64-pc-windows-gnu
+
+      # R CMD check warns when an install downloads crates, so the tarball
+      # carries them, as a CRAN tarball would.
+      - name: Vendor the Rust crates
+        run: sh tools/vendor.sh
+        shell: bash
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
