@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0 started 2026-10-30: steps 1 and 2 are done (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`). Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0 and R1 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R2 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -119,7 +119,7 @@ Each decision has a recommendation; this plan assumes it unless the maintainer s
 | R-D2 | Linear algebra | **faer 0.24.4, pinned exactly** (`=0.24.4`), `default-features = false`, features `std`, `linalg`, `sparse`, `sparse-linalg` (no `rayon`, `rand` or `npy`). It covers sparse LU and Cholesky with a symbolic/numeric split, AMD and custom orderings (`SymmetricOrdering::Custom`), transpose solves, and dense LU and Cholesky. SIMD kernels are chosen at run time, so `-C target-cpu=native` is never needed. | `nalgebra` plus hand-written sparse code (no sparse LU: we would write and maintain one); a Rust port of CSparse (LGPL-2.1+; smaller, but ours to maintain). |
 | R-D3 | Random numbers | **Exact port of R's generators** (§6.6). | `rand`/`rand_distr`: faster normals (ziggurat), but seeds lose their meaning and the port can only be checked distributionally. Can be revisited after R5 (R7) if profiling shows the RNG dominates. |
 | R-D4 | Threads | **`std::thread::scope`**, with a fixed worker count and work queues. Threads never outlive a call. rayon's global pool keeps threads alive, and a later `fork()` (e.g. `parallel::mclapply()` calling `psprobit()`) then deadlocks in the child. | rayon with a local `ThreadPool` built and dropped per call (adds a dependency for no gain here). |
-| R-D5 | Migration strategy | **Feature branch `rust` plus a frozen C++ reference build.** Tag the last C++ commit (e.g. `cpp-final`), install it into its own library (`lib_cpp`), and compare across R processes (§6.10). This means two builds, not two backends: each R caller switches to Rust as its port lands, and there is no run-time switch between engines. Until R5, though, the branch package still holds the C++ code next to the Rust code, and Rcpp and savvy would each define `R_init_panelspatialprobit`. *Found in R0 (2026-10-30):* `src/registration.c` registers both sets of routines in one table. `Rcpp::compileAttributes()` then leaves registration to it, and `PKG_CPPFLAGS` renames the `R_init` in savvy's generated `init.c`. Both are removed in R5. | A dual backend inside one package, selectable at run time (useful only if the port must ship piecemeal). |
+| R-D5 | Migration strategy | **Feature branch `rust` plus a frozen C++ reference build.** Tag the last C++ commit (e.g. `cpp-final`), install it into its own library (`lib_cpp`), and compare across R processes (§6.10). This means two builds, not two backends: each R caller switches to Rust as its port lands, and there is no run-time switch between engines. Until R5, though, the branch package still holds the C++ code next to the Rust code, and Rcpp and savvy would each define `R_init_panelspatialprobit`. *Found in R0 (2026-10-30):* `src/registration.c` registers both sets of routines in one table. `Rcpp::compileAttributes()` then leaves registration to it; it compiles savvy's generated `init.c` itself, with that file's `R_init` renamed, and copies its routine table at load time (R1). Both it and the `OBJECTS` line of the Makevars are removed in R5. | A dual backend inside one package, selectable at run time (useful only if the port must ship piecemeal). |
 | R-D6 | Scope | §6.5. | Port everything numeric (rejected: loses the reference sampler as an oracle and changes `sim_psprobit()` data). |
 | R-D7 | Minimum Rust version | **Decided: 1.84**, set by faer (released 2025-01-09). CRAN asks for testing with a cargo at least two years old, and preferably four; 1.84 turns two in January 2027. | An older faer line (older API, no fixes); dropping faer (R-D2 alternatives). |
 | R-D8 | Order relative to the first CRAN submission | **Decided: the first CRAN submission is the Rust version**, after R5. The submission itself is deferred, with no date (maintainer, 2026-10-30). The C++ version is never released on CRAN. Consequences: the first-submission review also covers the Rust build. The build follows CRAN's rules from R0 on (cargo home inside the build tree, `-j 2`, rustc version in the log, Rust version check), but the CRAN-only work waits for §6.11 "Before the CRAN submission": vendoring, the CRAN flavour check, win-builder/mac-builder/rhub, and `cran-comments.md`. | Submit the C++ version first and ship Rust in the next release (the original recommendation: earlier submission, and the build system is not reviewed with a first submission). |
@@ -424,7 +424,7 @@ clean_target: $(SHLIB)
 - **`-j 2`** (CRAN).
 - **`CLEAN_TARGET`** is set only for vendored builds with the in-tree target, so development builds stay incremental.
 - **cargo runs on every build.** As in savvy's template, `libpspr.a` is deleted after linking, so make always calls cargo, which decides what to rebuild.
-- **Init renaming (R0-R4).** `PKG_CPPFLAGS = -DR_init_panelspatialprobit=psp_savvy_init`, and `src/registration.c` `#undef`s it before defining the real `R_init` (R-D5).
+- **Registration (R0-R4).** `src/registration.c` `#include`s savvy's `init.c` with its `R_init` renamed and registers savvy's and Rcpp's routines together; the Makevars set `OBJECTS` without `init.o` (R-D5).
 - **Windows.** `@EXTRA_LIBS@` is `-lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll`. Follow the current savvy Windows template for the linker setting and test on win-builder in R0. If CRAN adds Windows on ARM, add `aarch64-pc-windows-gnullvm`.
 - **macOS.** CRAN's builder has Rust in `~/.cargo/bin`, which step 1 covers. Build for both macOS architectures CRAN uses, and pass R's `MACOSX_DEPLOYMENT_TARGET` through.
 - **Portable code only.** No `-C target-cpu=native`: CRAN binaries run on many CPUs, and faer and pulp dispatch AVX2/AVX-512 at run time anyway.
@@ -448,7 +448,7 @@ The tarball is not committed. The whole source tarball should stay under 5 MB, a
 
 - **Target directory.** `export PSP_CARGO_TARGET_DIR=$HOME/.cache/panelspatialprobit/target` keeps cargo's output (about 1 GB, many small files) off the Google Drive/`fuseblk` mount. That avoids sync churn and file-lock problems, and builds stay incremental: a change to `pspcore` alone rebuilds in seconds.
 - **No more -O0 pitfall.** The Rust code is always built with the release profile from the Makevars, so the `-O0` problem of `roxygenise()`/`load_all()` no longer applies to it. Only the tiny `init.c` is affected.
-- **Wrapper generation.** `savvy-cli update . src/rust/pspr` regenerates `R/000-wrappers.R`, `src/init.c` and `src/rust/api.h` after any change to a `#[savvy]` function. The second argument is needed because `src/rust/Cargo.toml` is a workspace, not the binding crate. It replaces `Rcpp::compileAttributes()`, and its version must match the savvy crate (0.11.0). Until R5, also add each new routine to `src/registration.c`. Here `savvy-cli` is built from crates.io into `~/.cache/panelspatialprobit/tools/bin` (`cargo install savvy-cli --version 0.11.0 --locked --root ~/.cache/panelspatialprobit/tools`).
+- **Wrapper generation.** `savvy-cli update . src/rust/pspr` regenerates `R/000-wrappers.R`, `src/init.c` and `src/rust/api.h` after any change to a `#[savvy]` function. The second argument is needed because `src/rust/Cargo.toml` is a workspace, not the binding crate. It replaces `Rcpp::compileAttributes()`, and its version must match the savvy crate (0.11.0). Until R5, `src/registration.c` picks up the new routines from `init.c` by itself. Here `savvy-cli` is built from crates.io into `~/.cache/panelspatialprobit/tools/bin` (`cargo install savvy-cli --version 0.11.0 --locked --root ~/.cache/panelspatialprobit/tools`).
 - **Lock file.** The workspace uses resolver 3, so `cargo generate-lockfile` and `cargo update` pick dependency versions whose `rust-version` is at most 1.84 (for example `generativity` 1.1.0, not 1.2.1, which needs 1.85).
 
 **GitHub Actions.**
@@ -497,13 +497,13 @@ One step per row, in the order to do them.
 | 5 | R0 | Workspace skeleton: `pspcore`, `pspr`, `configure`/`configure.win`/`cleanup`, `Makevars.in`/`Makevars.win.in`, savvy wrappers, one exported function; `.gitignore` and `.Rbuildignore` entries; `SystemRequirements` and `Depends: R (>= 4.5)`. *Done 2026-10-30: the function is `psp_rs_rng("unif", ...)` (MRG32k3a, equal to `runif()`; `test-rng.R`); `src/registration.c` (R-D5); vendoring moved here (below).* | 2 | Claude |
 | 6 | R0 | Local `R CMD check --as-cran` on Linux; measure `codegen-units` and `lto`, install time and installed size. *Done 2026-10-30: see "R0 results" below.* | 5 | Claude |
 | 7 | R0 | Add Rust to the GitHub workflows: cargo cache, Windows target, a `rust` job (fmt, clippy, tests, licences), an MSRV job; add `rust` to the `push` branches of R-CMD-check and test-coverage (they run on `main`/`master` and pull requests only). *Done 2026-10-30 (`rust.yaml`; R-CMD-check vendors the crates first); not yet run.* | 5 | Claude |
-| 8 | R0 | Commit and push `rust`, so GitHub Actions checks the skeleton on Linux, macOS and Windows | 6, 7 | You, or Claude when asked |
-| 9 | R0 | Fix platform failures until the R0 exit is met (each fix pushed as in step 8) | 8 | Claude |
-| 10 | R1 | `rng`, with `test-rng.R` and Rust unit tests | 9 | Claude |
-| 11 | R1 | `dist` (truncnorm, `pnorm`, `dnorm`); `psp_rs_rtnorm()` replaces `psp_rtnorm_cpp` in `test-truncnorm.R`; draws checked against `lib_cpp` | 10 | Claude |
-| 12 | R1 | `sparse` (CSC, weights, pattern updates) and the R helpers `.psp_csc()` and `.psp_rs_weights()` | 9 | Claude |
-| 13 | R1 | `par` and `pspr::run`: worker pool, cancel flag, interrupt polling, progress; interrupt check with `SIGINT` | 9 | Claude |
-| 14 | R1 | miri on `rng`, `dist` and `sparse`; R1 exit | 11, 12, 13 | Claude |
+| 8 | R0 | Commit and push `rust`, so GitHub Actions checks the skeleton on Linux, macOS and Windows. *Done 2026-10-31 (`95ebe48`).* | 6, 7 | You, or Claude when asked |
+| 9 | R0 | Fix platform failures until the R0 exit is met (each fix pushed as in step 8). *Done 2026-10-31: nothing to fix; every workflow passed on the first run, and R-CMD-check gives 1 NOTE (new submission) on all five configurations. R0 exit met.* | 8 | Claude |
+| 10 | R1 | `rng`, with `test-rng.R` and Rust unit tests. *Done 2026-10-31: bit-identical to R on x86_64 for `runif`, `rnorm`, `rexp`, `rgamma` (shapes 0.3-500), `rt` and both stream jumps.* | 9 | Claude |
+| 11 | R1 | `dist` (truncnorm, `pnorm`, `dnorm`); `psp_rs_rtnorm()` replaces `psp_rtnorm_cpp` in `test-truncnorm.R`; draws checked against `lib_cpp`. *Done 2026-10-31: also `qnorm`; `pnorm`/`dnorm`/`qnorm` bit-identical to R over both tails and log scales; truncated normal draws identical to the C++ sampler's (in-package test until R5).* | 10 | Claude |
+| 12 | R1 | `sparse` (CSC, weights, pattern updates) and the R helpers `.psp_csc()` and `.psp_rs_weights()`. *Done 2026-10-31 (`test-rust-sparse.R`): `I - rho W` identical to Matrix, `(I - lambda M)(I - rho W)` within 1e-14.* | 9 | Claude |
+| 13 | R1 | `par` and `pspr::run`: worker pool, cancel flag, interrupt polling, progress; interrupt check with `SIGINT`. *Done 2026-10-31 (`test-rust-par.R`, `validation/rust_port/check_interrupt.R`): a 4-thread job stops 2 ms after SIGINT with an R `interrupt` condition and no threads left.* | 9 | Claude |
+| 14 | R1 | miri on `rng`, `dist` and `sparse`; R1 exit. *Done 2026-10-31: no findings (nightly toolchain with miri, `-Zmiri-deterministic-floats`); R1 exit met.* | 11, 12, 13 | Claude |
 | 15 | R2 | Cross-build harness `validation/rust_port/`: `lib_cpp` against the branch build, in separate R processes with the same seeds | 3, 14 | Claude |
 | 16 | R2 | Switch `.psp_fit` to `psp_rs_sample()` and port binary SAR/SLX/none with pooled and diagonal RE; unported variants stop with "not yet ported" on the branch | 15 | Claude |
 | 17 | R2 | Ordered outcomes, both cut-point samplers, scale move; `psp_rs_cut_kernel()` replaces `psp_cut_kernel_cpp` in `test-cutmove.R` | 16 | Claude |
@@ -546,7 +546,7 @@ Steps 1-9.
 - [x] Workspace skeleton: `pspcore`, `pspr`, `configure`/`configure.win`/`cleanup`, `Makevars.in`/`Makevars.win.in`, savvy wrappers, one exported function (e.g. `psp_rs_rng("unif", ...)`).
 - [x] Measure the build options: `codegen-units` 1 vs 16 and `lto` off/thin/fat, against install time and the speed of a toy kernel. Record the installed size.
 - [x] Rust in the GitHub workflows (§6.9).
-- [~] Cross-platform proof: `R CMD check --as-cran` with the skeleton on Linux locally, and on GitHub Actions for macOS and Windows. The repository has existed since 2026-10-30 (`gueyenono/panelspatialprobit`).
+- [x] Cross-platform proof: `R CMD check --as-cran` with the skeleton on Linux locally, and on GitHub Actions for macOS and Windows. The repository has existed since 2026-10-30 (`gueyenono/panelspatialprobit`).
 
 **Exit:** the skeleton package passes `R CMD check --as-cran` on Linux, macOS and Windows (GitHub Actions), with only NOTEs that are understood; it installs in under 3 min with `-j 2`; decisions are recorded in this file.
 
@@ -563,13 +563,21 @@ Steps 1-9.
 
 Steps 10-14.
 
-- [ ] `rng`: MRG32k3a, inversion normal (AS241), `exp_rand`, `rgamma` (GD and GS), `rt`, `next_stream`, `next_substream`; `test-rng.R`.
-- [ ] `dist`: truncnorm, R's `pnorm` (including log) and `dnorm`. `psp_rs_rtnorm()` replaces `psp_rtnorm_cpp` in `test-truncnorm.R`.
-- [ ] `sparse`: `Csc`, `Weights`, conversion from `.psp_csc()`, mat-vec per period, merged patterns with value updates.
-- [ ] `par`: scoped worker pool, fixed chunking, cancel flag, progress counters. `pspr::run`: interrupt polling and progress printing.
-- [ ] Rust unit tests alongside each module; miri on `rng`/`dist`/`sparse`.
+- [x] `rng`: MRG32k3a, inversion normal (AS241), `exp_rand`, `rgamma` (GD and GS), `rt`, `next_stream`, `next_substream`; `test-rng.R`.
+- [x] `dist`: truncnorm, R's `pnorm` (including log) and `dnorm`. `psp_rs_rtnorm()` replaces `psp_rtnorm_cpp` in `test-truncnorm.R`.
+- [x] `sparse`: `Csc`, `Weights`, conversion from `.psp_csc()`, mat-vec per period, merged patterns with value updates.
+- [x] `par`: scoped worker pool, fixed chunking, cancel flag, progress counters. `pspr::run`: interrupt polling and progress printing.
+- [x] Rust unit tests alongside each module; miri on `rng`/`dist`/`sparse`.
 
 **Exit:** R's RNG streams reproduced (`expect_identical`, or ≤ 1 ulp where `libm` differs); `rtnorm` draws identical to `lib_cpp`; interrupting a dummy multi-thread job returns promptly on Linux.
+
+**R1 results (2026-10-31):**
+
+- **Exactness.** Every generator and normal function matches R bit for bit on x86_64 (`test-rng.R`; Rust known-answer tests in `pspcore/tests/r_reference.rs`). On other architectures `test-rng.R` compares to 1e-13, because a C compiler may fuse multiply-adds in R's own code (Apple clang does by default).
+- **Registration.** `src/registration.c` now compiles savvy's `init.c` itself and copies its `CallEntries` at load time, so new `#[savvy]` functions need no manual edit; `src/Makevars.in` lists `OBJECTS` without `init.o` (this replaces the R0 `PKG_CPPFLAGS` rename).
+- **Interrupt test harness.** A child started with `&` from a non-interactive shell inherits SIGINT as ignored, and R keeps that; `check_interrupt.R` forks with `parallel::mcparallel` instead, which also exercises Rust after `fork()`.
+- **Authorship.** `tools/rust_authors.R` writes `inst/AUTHORS` (72 crates) from `cargo metadata`; `inst/COPYRIGHTS` lists the R Core code ported to Rust; `Authors@R` has both copyright-holder entries.
+- **miri** needs the nightly toolchain with the `miri` and `rust-src` components (installed here 2026-10-31): `MIRIFLAGS=-Zmiri-deterministic-floats cargo +nightly miri test -p pspcore -- --skip par::` (about 1 min; the `par` tests are too slow under miri).
 
 ### R2: Sampler (L)
 
@@ -622,7 +630,7 @@ Steps 35-37.
 
 Steps 38-41.
 
-- [ ] Delete `src/sampler.cpp`, `src/ghk.cpp`, `src/truncnorm.h`, `src/RcppExports.cpp`, `R/RcppExports.R` and `src/registration.c`, and the `PKG_CPPFLAGS` rename in both Makevars templates; update DESCRIPTION and NAMESPACE.
+- [ ] Delete `src/sampler.cpp`, `src/ghk.cpp`, `src/truncnorm.h`, `src/RcppExports.cpp`, `R/RcppExports.R` and `src/registration.c`, and the `OBJECTS` line in both Makevars templates; update DESCRIPTION and NAMESPACE.
 - [ ] Archive `validation/rust_port/` results (keep the scripts, mark them historical).
 - [ ] Update the docs:
   - NEWS (behaviour changes in §6.6);
@@ -695,7 +703,7 @@ Step 44. These matter only for CRAN, so they wait for the submission (R-D8). The
 | `tools/config.sh`, `cleanup.win` | New (the shared configure script; Windows cleanup) | R0 |
 | `src/Makevars.in`, `src/Makevars.win.in`, `src/init.c`, `src/rust/**` | New | R0+ |
 | `src/registration.c` | New in R0 (both engines' routines, R-D5); deleted in R5 | R0, R5 |
-| `tools/rust_authors.R`, `inst/AUTHORS`, `inst/COPYRIGHTS` | New | R1 |
+| `tools/rust_authors.R`, `inst/AUTHORS`, `inst/COPYRIGHTS` | New (done in R1) | R1 |
 | `tools/vendor.sh`, `src/rust/vendor-config.toml` | New | R0 (R CMD check needs vendored crates) |
 | `cran-comments.md` | New | before the CRAN submission |
 | `.Rbuildignore` | Add `^src/rust/target$`, `^src/rust/vendor$`, `^src/\.cargo$`, `^src/Makevars$`, `^src/Makevars\.win$`, `^rust-dev$`, `^tools/vendor\.sh$`, `^cran-comments\.md$` | R0 |

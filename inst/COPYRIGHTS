@@ -1,0 +1,20 @@
+panelspatialprobit: copyright holders of code not written for the package
+
+R Core Team
+  Rust ports of R's random number and normal distribution code, under
+  GPL (>= 2):
+    src/rust/pspcore/src/rng/mrg32k3a.rs  src/main/RNG.c (L'Ecuyer-CMRG
+                                          unif_rand) and
+                                          src/library/parallel/src/rngstream.c
+    src/rust/pspcore/src/rng/normal.rs    src/nmath/snorm.c (inversion)
+    src/rust/pspcore/src/rng/exp.rs       src/nmath/sexp.c
+    src/rust/pspcore/src/rng/gamma.rs     src/nmath/rgamma.c
+    src/rust/pspcore/src/rng/mod.rs       src/nmath/rchisq.c, src/nmath/rt.c
+    src/rust/pspcore/src/dist/qnorm.rs    src/nmath/qnorm.c
+    src/rust/pspcore/src/dist/pnorm.rs    src/nmath/pnorm.c
+    src/rust/pspcore/src/dist/dnorm.rs    src/nmath/dnorm.c
+  Copyright (C) 1995-2024 The R Core Team and the R Foundation.
+
+Authors of the Rust crates the package links
+  Vendored in src/rust/vendor.tar.xz; listed with their authors and licences
+  in inst/AUTHORS.

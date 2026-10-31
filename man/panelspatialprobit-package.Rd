@@ -27,7 +27,8 @@ Authors:
 
 Other contributors:
 \itemize{
-  \item R Core Team (RNG and nmath code ported to Rust) [copyright holder]
+  \item R Core Team (RNG and nmath code ported to Rust; see inst/COPYRIGHTS) [copyright holder]
+  \item Authors of the dependency Rust crates (see inst/AUTHORS) [copyright holder]
 }
 
 }

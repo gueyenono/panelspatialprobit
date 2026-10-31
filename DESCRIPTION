@@ -6,7 +6,9 @@ Authors@R:
     c(person("Package", "Author", email = "nonoghislain@gmail.com",
              role = c("aut", "cre")),
       person("R Core Team", role = "cph",
-             comment = "RNG and nmath code ported to Rust"))
+             comment = "RNG and nmath code ported to Rust; see inst/COPYRIGHTS"),
+      person("Authors of the dependency Rust crates", role = "cph",
+             comment = "see inst/AUTHORS"))
 Description: Bayesian Markov chain Monte Carlo estimation of spatial probit
     and spatial ordered probit models for panel data. Supports spatial
     autoregressive, spatial Durbin, spatial lag of X, spatial error and

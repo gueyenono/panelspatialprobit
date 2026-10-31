@@ -37,14 +37,86 @@ NULL
   stop(class, " cannot be modified", call. = FALSE)
 }
 
+#' A dummy multi-thread job for testing threads, progress and interrupts
+#' (plan/06 step 13): task `i` sums `iters` blocks of 1,000 normal draws from
+#' the `i`-th stream after `seed`.
+#'
+#' @param tasks Number of tasks.
+#' @param threads Worker threads.
+#' @param iters Blocks per task.
+#' @param seed The six L'Ecuyer-CMRG seed integers.
+#' @param progress Print progress.
+#' @return The task sums.
+#' @noRd
+`psp_rs_dummy_job` <- function(`tasks`, `threads`, `iters`, `seed`, `progress`) {
+  .Call(savvy_psp_rs_dummy_job__impl, `tasks`, `threads`, `iters`, `seed`, `progress`)
+}
+
+#' The spatial filter of period `t` (1-based), `A_t = (I - lambda M_t)(I - rho
+#' W_t)` (or `I - rho W_t` without M), on its merged pattern, with the column
+#' sums of squares, for tests (plan/06 step 12).
+#'
+#' @param w,m Weights from `.psp_rs_weights()` (`m` is ignored unless `has_m`).
+#' @param has_m Whether the filter has the error term `I - lambda M`.
+#' @param rho,lambda Parameters.
+#' @param t Period.
+#' @return `list(p, i, x, colsq)`.
+#' @noRd
+`psp_rs_filter` <- function(`w`, `m`, `has_m`, `rho`, `lambda`, `t`) {
+  .Call(savvy_psp_rs_filter__impl, `w`, `m`, `has_m`, `rho`, `lambda`, `t`)
+}
+
+#' The seed of the next stream or substream (`parallel::nextRNGStream()`,
+#' `nextRNGSubStream()`), for tests.
+#'
+#' @param seed The six L'Ecuyer-CMRG seed integers.
+#' @param substream `TRUE` for the next substream.
+#' @noRd
+`psp_rs_next_stream` <- function(`seed`, `substream`) {
+  .Call(savvy_psp_rs_next_stream__impl, `seed`, `substream`)
+}
+
+#' The ported normal distribution functions, for tests: `pnorm(x)`,
+#' `dnorm(x)` and `qnorm(x)` for the standard normal.
+#'
+#' @param fun `"pnorm"`, `"dnorm"` or `"qnorm"`.
+#' @param x Values (probabilities for `"qnorm"`).
+#' @param lower_tail,log Tail and log flags (`pnorm`; `log` also for `dnorm`).
+#' @noRd
+`psp_rs_norm_fun` <- function(`fun`, `x`, `lower_tail`, `log`) {
+  .Call(savvy_psp_rs_norm_fun__impl, `fun`, `x`, `lower_tail`, `log`)
+}
+
 #' Draws from the Rust ports of R's generators, for tests (plan/06 §6.6).
 #'
-#' @param kind Distribution: `"unif"`.
+#' @param kind `"unif"`, `"norm"`, `"exp"`, `"gamma"` (`par = c(shape, scale)`)
+#'   or `"t"` (`par = df`).
 #' @param n Number of draws.
+#' @param par Distribution parameters (see `kind`).
 #' @param seed The six L'Ecuyer-CMRG seed integers (`.Random.seed[-1]`).
 #' @noRd
-`psp_rs_rng` <- function(`kind`, `n`, `seed`) {
-  .Call(savvy_psp_rs_rng__impl, `kind`, `n`, `seed`)
+`psp_rs_rng` <- function(`kind`, `n`, `par`, `seed`) {
+  .Call(savvy_psp_rs_rng__impl, `kind`, `n`, `par`, `seed`)
+}
+
+#' Truncated normal draws, N(mean, sd^2) on `[lo, hi]` (replaces
+#' `psp_rtnorm_cpp`).
+#'
+#' @param n Number of draws.
+#' @param mean,sd,lo,hi Parameters and bounds (bounds may be infinite).
+#' @param seed The six L'Ecuyer-CMRG seed integers.
+#' @noRd
+`psp_rs_rtnorm` <- function(`n`, `mean`, `sd`, `lo`, `hi`, `seed`) {
+  .Call(savvy_psp_rs_rtnorm__impl, `n`, `mean`, `sd`, `lo`, `hi`, `seed`)
+}
+
+#' `W_t v_t` for every period, `v` stacked time-slow, unit-fast, for tests.
+#'
+#' @param w Weights from `.psp_rs_weights()`.
+#' @param v Vector of length N T.
+#' @noRd
+`psp_rs_weights_apply` <- function(`w`, `v`) {
+  .Call(savvy_psp_rs_weights_apply__impl, `w`, `v`)
 }
 
 

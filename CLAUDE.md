@@ -47,13 +47,16 @@ Rscript validation/vignette_data.R                                 # refresh vig
 Rscript validation/bench/bench_postproc.R <lib>                  # impacts, predict, PPC, loglik and log-det timings (~20 s)
 ```
 
-**Rust (branch `rust`, plan/06).** The package builds the Rust workspace in `src/rust` through `configure` and `src/Makevars.in`. Until phase R5 it still holds the C++ engine too, and `src/registration.c` registers both. The frozen C++ reference (tag `cpp-final`) is installed in `~/.cache/panelspatialprobit/lib_cpp`.
+**Rust (branch `rust`, plan/06).** The package builds the Rust workspace in `src/rust` through `configure` and `src/Makevars.in`. Until phase R5 it still holds the C++ engine too, and `src/registration.c` registers both (it compiles savvy's generated `init.c` itself, so new `#[savvy]` functions are picked up automatically). `R/rust.R` converts R objects for Rust (`.psp_csc()`, `.psp_rs_weights()`); the `psp_rs_*` functions are internal. The frozen C++ reference (tag `cpp-final`) is installed in `~/.cache/panelspatialprobit/lib_cpp`.
 
 ```sh
 export PSP_CARGO_TARGET_DIR=$HOME/.cache/panelspatialprobit/target   # always: keeps cargo's ~1 GB output off the Drive mount and builds incrementally
 (cd src/rust && cargo test -p pspcore && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check)   # cargo is in ~/.cargo/bin
-~/.cache/panelspatialprobit/tools/bin/savvy-cli update . src/rust/pspr   # after changing a #[savvy] function; then add the routine to src/registration.c
+~/.cache/panelspatialprobit/tools/bin/savvy-cli update . src/rust/pspr   # after changing a #[savvy] function; then roxygenise
 sh tools/vendor.sh   # writes src/rust/vendor.tar.xz (not committed) before R CMD build: R CMD check warns when an install downloads crates
+Rscript tools/rust_authors.R   # rewrite inst/AUTHORS after any change to src/rust/Cargo.lock
+(cd src/rust && MIRIFLAGS=-Zmiri-deterministic-floats cargo +nightly miri test -p pspcore -- --skip par::)   # undefined-behaviour check (~1 min)
+Rscript validation/rust_port/check_interrupt.R <lib>   # Ctrl-C during a multi-threaded Rust job (unix)
 ```
 
 ## Architecture

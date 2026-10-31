@@ -6,9 +6,10 @@ TARGET_DIR = @TARGET_DIR@
 LIBDIR = $(TARGET_DIR)/$(TARGET)/release
 STATLIB = $(LIBDIR)/libpspr.a
 
-# registration.c registers the Rcpp and savvy routines together until the
-# C++ engine is removed (plan/06 R5); this renames savvy's own R_init.
-PKG_CPPFLAGS = -DR_init_panelspatialprobit=psp_savvy_init
+# Until the C++ engine is removed (plan/06 R5), registration.c compiles
+# savvy's init.c itself and registers the Rcpp and savvy routines together,
+# so init.c is not compiled on its own.
+OBJECTS = RcppExports.o ghk.o registration.o sampler.o
 PKG_LIBS = -L$(LIBDIR) -lpspr -lws2_32 -ladvapi32 -luserenv -lbcrypt -lntdll
 
 # Rtools does not put the linker where cargo expects it.
