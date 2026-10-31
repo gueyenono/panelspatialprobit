@@ -15,6 +15,9 @@
 #' * `persistence`: the share of units whose outcome equals that of the
 #'   previous period, which checks the dependence over time (\eqn{T \ge 2}).
 #'
+#' The posterior draws are processed in parallel under the user's
+#' [future::plan()] (see "Parallel post-processing" in [psp_control()]).
+#'
 #' @param fit A fitted `psprobit` object.
 #' @param draws Number of posterior draws to replicate (default
 #'   `control$impacts_draws`).
@@ -45,34 +48,15 @@ psp_ppc <- function(fit, draws = NULL, seed = NULL) {
     alpha <- NULL
   }
   pm <- .psp_par_matrix(fit)[idx, , drop = FALSE]
-  ordered <- inherits(fit, "psoprobit")
-  N <- fit$N
   T <- fit$T
-  I <- Matrix::Diagonal(N)
   obs <- fit$y  # sorted: time slow, unit fast; NA = missing
-  yrep <- .psp_with_rng_restore({
-    if (!is.null(seed)) set.seed(seed)
-    vapply(seq_along(idx), function(d) {
-      par <- pm[d, ]
-      rho <- if ("rho" %in% names(par)) par[["rho"]] else 0
-      lambda <- if ("lambda" %in% names(par)) par[["lambda"]] else 0
-      a <- if (is.null(alpha)) 0 else alpha[d, ]
-      mu <- matrix(fit$X %*% par[colnames(fit$X)], N, T) + a
-      z <- mu + matrix(.psp_rerr(fit, N * T), N, T)
-      gamma <- if ("lag_z" %in% names(par)) par[["lag_z"]] else 0
-      for (t in seq_len(T)) {
-        if (lambda != 0) {
-          z[, t] <- mu[, t] + as.vector(Matrix::solve(I - lambda * .psp_Wt(fit$M, t),
-                                                      z[, t] - mu[, t]))
-        }
-        if (t > 1 && gamma != 0) z[, t] <- z[, t] + gamma * z[, t - 1]  # latent AR
-        if (rho != 0) z[, t] <- as.vector(Matrix::solve(I - rho * .psp_Wt(fit$W, t), z[, t]))
-      }
-      z <- as.vector(z)
-      if (ordered) findInterval(z, .psp_cutpoints(fit, par)[2:fit$J]) + 1L
-      else as.integer(z > 0)
-    }, integer(N * T))
-  })
+  # one random number stream per draw (Rust); seed = NULL draws the base seed
+  # from the current RNG state, which is left unchanged
+  if (is.null(seed)) seed <- .psp_with_rng_restore(sample.int(.Machine$integer.max, 1))
+  dr <- .psp_rs_draws(fit, pm, alpha)
+  dr$seeds <- .psp_rs_seeds(seed, length(idx))
+  parts <- .psp_post_map(.psp_rs_ppc_call, .psp_rs_post_model(fit, NULL, NULL), dr)
+  yrep <- do.call(cbind, lapply(parts, matrix, nrow = fit$N * T))
   yrep[is.na(obs), ] <- NA
   stats <- list(share = .psp_stat_share, moran = .psp_stat_moran)
   if (T >= 2) stats$persistence <- .psp_stat_persistence

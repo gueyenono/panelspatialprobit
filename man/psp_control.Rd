@@ -33,8 +33,8 @@ psp_control(
 
 \item{chains}{Number of chains.}
 
-\item{cores}{Number of cores used to run chains in parallel (forking, so
-only effective on Unix-alikes). Results do not depend on \code{cores}.}
+\item{cores}{Number of chains run at once, on separate threads (on every
+operating system). Results do not depend on \code{cores}.}
 
 \item{seed}{Optional integer seed. Results are reproducible given \code{seed}.}
 
@@ -78,6 +78,17 @@ An object of class \code{psp_control}.
 \description{
 MCMC and computation settings
 }
+\section{Parallel post-processing}{
+
+\code{\link[=psp_impacts]{psp_impacts()}}, \link[=predict.psprobit]{predict()}, \code{\link[=psp_ppc]{psp_ppc()}},
+\code{\link[=psp_response_path]{psp_response_path()}}, \code{\link[=psp_loglik]{psp_loglik()}}, \code{logLik()} and \code{\link[=psp_dic]{psp_dic()}} work
+through the posterior draws in blocks and follow the \code{\link[future:plan]{future::plan()}} set
+by the user: for example \code{future::plan("multisession", workers = 4)}, or
+\code{future::plan("multicore", workers = 4)} on Unix-alikes. The default
+sequential plan runs in the current R session. Results do not depend on
+the plan or the number of workers.
+}
+
 \examples{
 psp_control(iter = 500, warmup = 250, chains = 2)
 }

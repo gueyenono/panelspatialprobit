@@ -65,6 +65,9 @@ problem and becomes unreliable beyond a few hundred observations.
 the parameters, so \code{AIC()} and \code{BIC()} work. \code{psp_dic()} computes the
 deviance information criterion (Spiegelhalter et al. 2002) from the
 marginal likelihood.
+
+The posterior draws are processed in parallel under the user's
+\code{\link[future:plan]{future::plan()}} (see "Parallel post-processing" in \code{\link[=psp_control]{psp_control()}}).
 }
 \examples{
 W <- psp_weights(rook_weights(4, 4), style = "W")

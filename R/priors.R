@@ -99,8 +99,8 @@ psp_priors <- function(beta = prior_normal(0, 10), rho = prior_beta(1.01, 1.01),
 #' @param warmup Number of warm-up iterations per chain (discarded).
 #' @param thin Thinning interval for stored draws.
 #' @param chains Number of chains.
-#' @param cores Number of cores used to run chains in parallel (forking, so
-#'   only effective on Unix-alikes). Results do not depend on `cores`.
+#' @param cores Number of chains run at once, on separate threads (on every
+#'   operating system). Results do not depend on `cores`.
 #' @param seed Optional integer seed. Results are reproducible given `seed`.
 #' @param z_sweeps Number of Gibbs sweeps over the latent variables per
 #'   iteration.
@@ -125,6 +125,14 @@ psp_priors <- function(beta = prior_normal(0, 10), rho = prior_beta(1.01, 1.01),
 #'   ([psp_t()]).
 #' @param progress Logical; print sampling progress (only when chains run
 #'   sequentially, i.e. `cores = 1`).
+#' @section Parallel post-processing:
+#' [psp_impacts()], [predict()][predict.psprobit], [psp_ppc()],
+#' [psp_response_path()], [psp_loglik()], `logLik()` and [psp_dic()] work
+#' through the posterior draws in blocks and follow the [future::plan()] set
+#' by the user: for example `future::plan("multisession", workers = 4)`, or
+#' `future::plan("multicore", workers = 4)` on Unix-alikes. The default
+#' sequential plan runs in the current R session. Results do not depend on
+#' the plan or the number of workers.
 #' @return An object of class `psp_control`.
 #' @examples
 #' psp_control(iter = 500, warmup = 250, chains = 2)

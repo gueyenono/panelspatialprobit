@@ -31,6 +31,7 @@ Language: en-GB
 Depends: R (>= 4.5)
 SystemRequirements: Cargo (Rust's package manager), rustc >= 1.84
 Imports:
+    future,
     generics,
     graphics,
     Matrix,

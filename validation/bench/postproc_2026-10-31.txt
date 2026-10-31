@@ -1,0 +1,18 @@
+panelspatialprobit 0.0.0.9000, R 4.6.0; SAR-RE binary fit, N = 1000, T = 10, k = 5; seconds
+
+                                                  task sequential multicore_4
+                              psp_impacts(), 100 draws       0.61        0.33
+                                  predict(), 100 draws       0.39        0.27
+                                  psp_ppc(), 100 draws       0.47        0.43
+              psp_response_path(), 100 draws x 20 sims       3.67        1.05
+ psp_loglik(type = "conditional"), 10 draws x 100 reps       2.15        0.80
+ multisession_4
+           0.24
+           0.17
+           0.31
+           1.00
+           0.74
+
+                         task seconds
+ log-determinant grid, sparse    0.17
+  log-determinant grid, eigen    0.51

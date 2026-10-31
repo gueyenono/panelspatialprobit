@@ -16,9 +16,14 @@
 pub mod dense;
 pub mod dist;
 pub mod error;
+pub mod ghk;
+pub mod lndet;
 pub mod par;
+pub mod post;
+pub mod rf;
 pub mod rng;
 pub mod sampler;
+pub mod simulate;
 pub mod sparse;
 
 pub use error::PspError;

@@ -38,6 +38,9 @@ each period, which checks the spatial dependence;
 \item \code{persistence}: the share of units whose outcome equals that of the
 previous period, which checks the dependence over time (\eqn{T \ge 2}).
 }
+
+The posterior draws are processed in parallel under the user's
+\code{\link[future:plan]{future::plan()}} (see "Parallel post-processing" in \code{\link[=psp_control]{psp_control()}}).
 }
 \examples{
 W <- psp_weights(rook_weights(5, 5), style = "W")

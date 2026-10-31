@@ -86,19 +86,12 @@ rook_weights <- function(nrow, ncol) {
   grid <- seq(rmin + step / 2, rmax - step / 2, by = step)
   if (method == "eigen") {
     ev <- eigen(as.matrix(W), only.values = TRUE)$values
-    re <- Re(ev)
-    im <- Im(ev)
-    lndet <- vapply(grid, function(r) {
-      0.5 * sum(log((1 - r * re)^2 + (r * im)^2))
-    }, numeric(1))
+    lndet <- psp_rs_lndet_eigen(Re(ev), Im(ev), grid)
   } else {
     coarse <- unique(c(seq(rmin + step / 2, rmax - step / 2, length.out = 120),
                        rmax - c(0.02, 0.01, 0.005, 0.002) - step / 2))
     coarse <- sort(coarse[coarse > rmin & coarse < rmax])
-    I <- Matrix::Diagonal(N)
-    vals <- vapply(coarse, function(r) {
-      as.numeric(Matrix::determinant(I - r * W, logarithm = TRUE)$modulus)
-    }, numeric(1))
+    vals <- psp_rs_lndet_sparse(.psp_csc(W), coarse)  # one sparse LU per point
     lndet <- stats::splinefun(coarse, vals, method = "natural")(grid)
   }
   list(grid = grid, lndet = lndet, method = method)

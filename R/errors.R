@@ -62,12 +62,6 @@ psp_t <- function(df = 7) {
   })
 }
 
-# Standard draws of the latent errors (normal or t)
-.psp_rerr <- function(fit, n) {
-  if (is.null(fit$errors) || fit$errors$type == "normal") stats::rnorm(n)
-  else stats::rt(n, fit$errors$df)
-}
-
 # Mean over the mixture columns of f(s): s is a vector (normal errors) or a
 # matrix with one column per mixture draw
 .psp_mix_mean <- function(f, s) if (is.matrix(s)) rowMeans(f(s)) else f(s)

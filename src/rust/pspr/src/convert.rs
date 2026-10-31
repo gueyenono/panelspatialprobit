@@ -93,7 +93,7 @@ pub fn flag(list: &ListSexp, what: &str, name: &str) -> savvy::Result<bool> {
     }
 }
 
-fn list_field(list: &ListSexp, what: &str, name: &str) -> savvy::Result<ListSexp> {
+pub fn list_field(list: &ListSexp, what: &str, name: &str) -> savvy::Result<ListSexp> {
     ListSexp::try_from(field(list, what, name)?)
         .map_err(|_| savvy::Error::new(format!("{what}: `{name}` must be a list")))
 }

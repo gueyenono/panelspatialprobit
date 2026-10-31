@@ -54,6 +54,26 @@ SEXP savvy_psp_rs_filter__impl(SEXP c_arg__w, SEXP c_arg__m, SEXP c_arg__has_m, 
     return handle_result(res);
 }
 
+SEXP savvy_psp_rs_ghk__impl(SEXP c_arg__model, SEXP c_arg__draws, SEXP c_arg__y, SEXP c_arg__reps, SEXP c_arg__seed) {
+    SEXP res = savvy_psp_rs_ghk__ffi(c_arg__model, c_arg__draws, c_arg__y, c_arg__reps, c_arg__seed);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_impacts__impl(SEXP c_arg__model, SEXP c_arg__draws, SEXP c_arg__vars_beta, SEXP c_arg__vars_theta, SEXP c_arg__by_period, SEXP c_arg__lesage) {
+    SEXP res = savvy_psp_rs_impacts__ffi(c_arg__model, c_arg__draws, c_arg__vars_beta, c_arg__vars_theta, c_arg__by_period, c_arg__lesage);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_lndet_eigen__impl(SEXP c_arg__re, SEXP c_arg__im, SEXP c_arg__grid) {
+    SEXP res = savvy_psp_rs_lndet_eigen__ffi(c_arg__re, c_arg__im, c_arg__grid);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_lndet_sparse__impl(SEXP c_arg__w, SEXP c_arg__points) {
+    SEXP res = savvy_psp_rs_lndet_sparse__ffi(c_arg__w, c_arg__points);
+    return handle_result(res);
+}
+
 SEXP savvy_psp_rs_next_stream__impl(SEXP c_arg__seed, SEXP c_arg__substream) {
     SEXP res = savvy_psp_rs_next_stream__ffi(c_arg__seed, c_arg__substream);
     return handle_result(res);
@@ -61,6 +81,31 @@ SEXP savvy_psp_rs_next_stream__impl(SEXP c_arg__seed, SEXP c_arg__substream) {
 
 SEXP savvy_psp_rs_norm_fun__impl(SEXP c_arg__fun, SEXP c_arg__x, SEXP c_arg__lower_tail, SEXP c_arg__log) {
     SEXP res = savvy_psp_rs_norm_fun__ffi(c_arg__fun, c_arg__x, c_arg__lower_tail, c_arg__log);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_ppc__impl(SEXP c_arg__model, SEXP c_arg__draws, SEXP c_arg__seeds) {
+    SEXP res = savvy_psp_rs_ppc__ffi(c_arg__model, c_arg__draws, c_arg__seeds);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_predict__impl(SEXP c_arg__model, SEXP c_arg__draws) {
+    SEXP res = savvy_psp_rs_predict__ffi(c_arg__model, c_arg__draws);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_probs__impl(SEXP c_arg__model, SEXP c_arg__draws) {
+    SEXP res = savvy_psp_rs_probs__ffi(c_arg__model, c_arg__draws);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_reduced_form__impl(SEXP c_arg__model, SEXP c_arg__draws, SEXP c_arg__need_impacts) {
+    SEXP res = savvy_psp_rs_reduced_form__ffi(c_arg__model, c_arg__draws, c_arg__need_impacts);
+    return handle_result(res);
+}
+
+SEXP savvy_psp_rs_response__impl(SEXP c_arg__model, SEXP c_arg__draws, SEXP c_arg__seeds, SEXP c_arg__spec) {
+    SEXP res = savvy_psp_rs_response__ffi(c_arg__model, c_arg__draws, c_arg__seeds, c_arg__spec);
     return handle_result(res);
 }
 
@@ -89,8 +134,17 @@ static const R_CallMethodDef CallEntries[] = {
     {"savvy_psp_rs_cut_kernel__impl", (DL_FUNC) &savvy_psp_rs_cut_kernel__impl, 12},
     {"savvy_psp_rs_dummy_job__impl", (DL_FUNC) &savvy_psp_rs_dummy_job__impl, 5},
     {"savvy_psp_rs_filter__impl", (DL_FUNC) &savvy_psp_rs_filter__impl, 6},
+    {"savvy_psp_rs_ghk__impl", (DL_FUNC) &savvy_psp_rs_ghk__impl, 5},
+    {"savvy_psp_rs_impacts__impl", (DL_FUNC) &savvy_psp_rs_impacts__impl, 6},
+    {"savvy_psp_rs_lndet_eigen__impl", (DL_FUNC) &savvy_psp_rs_lndet_eigen__impl, 3},
+    {"savvy_psp_rs_lndet_sparse__impl", (DL_FUNC) &savvy_psp_rs_lndet_sparse__impl, 2},
     {"savvy_psp_rs_next_stream__impl", (DL_FUNC) &savvy_psp_rs_next_stream__impl, 2},
     {"savvy_psp_rs_norm_fun__impl", (DL_FUNC) &savvy_psp_rs_norm_fun__impl, 4},
+    {"savvy_psp_rs_ppc__impl", (DL_FUNC) &savvy_psp_rs_ppc__impl, 3},
+    {"savvy_psp_rs_predict__impl", (DL_FUNC) &savvy_psp_rs_predict__impl, 2},
+    {"savvy_psp_rs_probs__impl", (DL_FUNC) &savvy_psp_rs_probs__impl, 2},
+    {"savvy_psp_rs_reduced_form__impl", (DL_FUNC) &savvy_psp_rs_reduced_form__impl, 3},
+    {"savvy_psp_rs_response__impl", (DL_FUNC) &savvy_psp_rs_response__impl, 4},
     {"savvy_psp_rs_rng__impl", (DL_FUNC) &savvy_psp_rs_rng__impl, 4},
     {"savvy_psp_rs_rtnorm__impl", (DL_FUNC) &savvy_psp_rs_rtnorm__impl, 6},
     {"savvy_psp_rs_sample__impl", (DL_FUNC) &savvy_psp_rs_sample__impl, 5},

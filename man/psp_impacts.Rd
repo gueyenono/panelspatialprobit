@@ -59,6 +59,9 @@ For regressor \eqn{r} and period \eqn{t},
 where \eqn{m_t = S^{-1}X_t\beta} and \eqn{s_i^2 = (1 + \sigma_\alpha^2)
 [S^{-1}S^{-\top}]_{ii}}. Direct impacts average the \eqn{i = j} terms, total
 impacts average row sums, and indirect = total - direct.
+
+The posterior draws are processed in parallel under the user's
+\code{\link[future:plan]{future::plan()}} (see "Parallel post-processing" in \code{\link[=psp_control]{psp_control()}}).
 }
 \examples{
 W <- psp_weights(rook_weights(4, 4), style = "W")

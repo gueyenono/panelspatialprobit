@@ -74,6 +74,43 @@ NULL
   .Call(savvy_psp_rs_filter__impl, `w`, `m`, `has_m`, `rho`, `lambda`, `t`)
 }
 
+#' GHK log-likelihood for each draw: `list(ll, mcse)`. Conditional on the
+#' random effects when `draws$alpha` is given, marginal otherwise (pooled
+#' models have none). Every draw uses the same stream `seed` (common random
+#' numbers).
+#'
+#' @param y Outcome codes, NA for missing.
+#' @noRd
+`psp_rs_ghk` <- function(`model`, `draws`, `y`, `reps`, `seed`) {
+  .Call(savvy_psp_rs_ghk__impl, `model`, `draws`, `y`, `reps`, `seed`)
+}
+
+#' Impacts for each draw: a vector of length draws x L, draw fastest, with
+#' L = vars x categories x 3 x periods laid out as in
+#' `pspcore::post::impacts`.
+#'
+#' @param vars_beta 0-based design columns of the regressors.
+#' @param vars_theta 0-based design columns of their spatial lags (-1: none).
+#' @param lesage Use the LeSage-Pace scale (no reduced-form sd).
+#' @noRd
+`psp_rs_impacts` <- function(`model`, `draws`, `vars_beta`, `vars_theta`, `by_period`, `lesage`) {
+  .Call(savvy_psp_rs_impacts__impl, `model`, `draws`, `vars_beta`, `vars_theta`, `by_period`, `lesage`)
+}
+
+#' Log-determinants on `grid` from the eigenvalues `re + i im` of W.
+#'
+#' @noRd
+`psp_rs_lndet_eigen` <- function(`re`, `im`, `grid`) {
+  .Call(savvy_psp_rs_lndet_eigen__impl, `re`, `im`, `grid`)
+}
+
+#' Sparse log-determinants `log |I - r W|` at `points`.
+#'
+#' @noRd
+`psp_rs_lndet_sparse` <- function(`w`, `points`) {
+  .Call(savvy_psp_rs_lndet_sparse__impl, `w`, `points`)
+}
+
 #' The seed of the next stream or substream (`parallel::nextRNGStream()`,
 #' `nextRNGSubStream()`), for tests.
 #'
@@ -93,6 +130,54 @@ NULL
 #' @noRd
 `psp_rs_norm_fun` <- function(`fun`, `x`, `lower_tail`, `log`) {
   .Call(savvy_psp_rs_norm_fun__impl, `fun`, `x`, `lower_tail`, `log`)
+}
+
+#' Replicated outcomes for posterior predictive checks: an integer n x draws
+#' matrix (column-major), each draw from its own stream.
+#'
+#' @noRd
+`psp_rs_ppc` <- function(`model`, `draws`, `seeds`) {
+  .Call(savvy_psp_rs_ppc__impl, `model`, `draws`, `seeds`)
+}
+
+#' Sums of the link (reduced-form mean) and of the category probabilities
+#' over each consecutive block of `pspcore::par::CHUNK` draws:
+#' `list(link = n x blocks, prob = n x categories x blocks)`. R adds the
+#' blocks in order, so the totals do not depend on how the draws were split
+#' between calls, as long as every call starts at a block boundary.
+#'
+#' @noRd
+`psp_rs_predict` <- function(`model`, `draws`) {
+  .Call(savvy_psp_rs_predict__impl, `model`, `draws`)
+}
+
+#' Category probabilities for each draw: n x categories x draws
+#' (column-major).
+#'
+#' @noRd
+`psp_rs_probs` <- function(`model`, `draws`) {
+  .Call(savvy_psp_rs_probs__impl, `model`, `draws`)
+}
+
+#' The reduced form of the first draw in `draws`, for tests:
+#' `list(m, s, q, d1, d2, t1, t2)` (`s` is n x q, column-major).
+#'
+#' @noRd
+`psp_rs_reduced_form` <- function(`model`, `draws`, `need_impacts`) {
+  .Call(savvy_psp_rs_reduced_form__impl, `model`, `draws`, `need_impacts`)
+}
+
+#' Response paths: for each draw, the mean differences in outcome
+#' probabilities (horizon x category x unit group, as in
+#' `pspcore::simulate::response_draw`), as a vector of length draws x L,
+#' draw fastest.
+#'
+#' @param spec `list(dynamic, lag, wlag, var, wvar, shock, start, permanent,
+#'   groups, nsim)`: 0-based design columns (-1: absent), the shock per unit,
+#'   the 0-based first period and the 0-based unit groups.
+#' @noRd
+`psp_rs_response` <- function(`model`, `draws`, `seeds`, `spec`) {
+  .Call(savvy_psp_rs_response__impl, `model`, `draws`, `seeds`, `spec`)
 }
 
 #' Draws from the Rust ports of R's generators, for tests (plan/06 §6.6).

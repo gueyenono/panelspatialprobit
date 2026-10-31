@@ -55,6 +55,41 @@ impl Csc {
     }
 
     /// The n x n identity.
+    /// A matrix from (row, column, value) triplets; duplicates are summed.
+    pub fn from_triplets(
+        n_rows: usize,
+        n_cols: usize,
+        trip: &[(usize, usize, f64)],
+    ) -> Result<Self, PspError> {
+        let mut t: Vec<(usize, usize, f64)> = trip.to_vec();
+        t.sort_unstable_by_key(|&(i, j, _)| (j, i));
+        let mut colptr = vec![0usize; n_cols + 1];
+        let mut rowind: Vec<usize> = Vec::with_capacity(t.len());
+        let mut val: Vec<f64> = Vec::with_capacity(t.len());
+        let mut last: Option<(usize, usize)> = None;
+        for (i, j, v) in t {
+            if i >= n_rows || j >= n_cols {
+                return Err(PspError::InvalidInput(
+                    "sparse matrix: triplet out of range".to_string(),
+                ));
+            }
+            if last == Some((i, j)) {
+                if let Some(x) = val.last_mut() {
+                    *x += v;
+                }
+            } else {
+                rowind.push(i);
+                val.push(v);
+                colptr[j + 1] += 1;
+                last = Some((i, j));
+            }
+        }
+        for j in 0..n_cols {
+            colptr[j + 1] += colptr[j];
+        }
+        Self::from_parts(n_rows, n_cols, colptr, rowind, val)
+    }
+
     pub fn identity(n: usize) -> Self {
         Self {
             n_rows: n,

@@ -24,6 +24,9 @@
 #' deviance information criterion (Spiegelhalter et al. 2002) from the
 #' marginal likelihood.
 #'
+#' The posterior draws are processed in parallel under the user's
+#' [future::plan()] (see "Parallel post-processing" in [psp_control()]).
+#'
 #' @param fit,object A fitted `psprobit` object.
 #' @param draws Number of posterior draws to evaluate.
 #' @param reps Number of GHK replications per evaluation.
@@ -67,12 +70,9 @@ psp_loglik <- function(fit, draws = 100, reps = 200, type = c("marginal", "condi
     idx <- .psp_draw_subset(fit, draws)
   }
   pm <- .psp_par_matrix(fit)[idx, , drop = FALSE]
-  out <- lapply(seq_along(idx), function(d) {
-    .psp_ghk_loglik(fit, pm[d, ], reps, seed, alpha = if (conditional) alpha[d, ])
-  })
-  mcse <- vapply(out, `[[`, numeric(1), "mcse")
-  .psp_ghk_check(mcse)
-  structure(vapply(out, `[[`, numeric(1), "ll"), mcse = mcse, type = type, reps = reps)
+  out <- .psp_ghk_loglik(fit, pm, reps, seed, alpha = if (conditional) alpha)
+  .psp_ghk_check(out$mcse)
+  structure(out$ll, mcse = out$mcse, type = type, reps = reps)
 }
 
 #' @rdname psp_loglik
@@ -80,7 +80,7 @@ psp_loglik <- function(fit, draws = 100, reps = 200, type = c("marginal", "condi
 logLik.psprobit <- function(object, reps = 500, seed = 1, ...) {
   .psp_ghk_normal_only(object)
   par <- object$coefficients
-  g <- .psp_ghk_loglik(object, par, reps, seed)
+  g <- .psp_ghk_loglik(object, matrix(par, 1, dimnames = list(NULL, names(par))), reps, seed)
   .psp_ghk_check(g$mcse)
   structure(g$ll, df = length(par), nobs = nobs.psprobit(object), mcse = g$mcse,
             class = "logLik")
@@ -91,7 +91,9 @@ logLik.psprobit <- function(object, reps = 500, seed = 1, ...) {
 psp_dic <- function(fit, draws = 100, reps = 200, seed = 1) {
   ll <- psp_loglik(fit, draws, reps, "marginal", seed)
   d_bar <- -2 * mean(ll)
-  d_hat <- -2 * .psp_ghk_loglik(fit, fit$coefficients, reps, seed)$ll
+  par <- fit$coefficients
+  d_hat <- -2 * .psp_ghk_loglik(fit, matrix(par, 1, dimnames = list(NULL, names(par))), reps,
+                                seed)$ll
   if (d_bar - d_hat < 0) {
     warning("Negative p_D: the GHK error dominates; increase 'reps'.", call. = FALSE)
   }
@@ -99,95 +101,21 @@ psp_dic <- function(fit, draws = 100, reps = 200, seed = 1) {
   list(dic = d_bar + p_d, p_d = p_d, d_bar = d_bar, d_hat = d_hat)
 }
 
-# GHK log-likelihood for one parameter vector. The latent vector is
-# (z_1, ..., z_T) and, for the marginal likelihood of a random-effects model,
-# alpha. With A_t = R_t S_t, the centred kernel is
+# GHK log-likelihood for each row of the draws x parameters matrix 'pm'
+# (pspcore::ghk; list(ll, mcse)). The latent vector is (z_1, ..., z_T) and,
+# for the marginal likelihood of a random-effects model, alpha. With
+# A_t = R_t S_t, the centred kernel is
 #   sum_t |A_t z_t - R_t alpha|^2 + |alpha|^2 / sigma^2,
 # whose precision is sparse (with |B alpha|^2 for spatial random effects);
-# given alpha only the z blocks remain.
-.psp_ghk_loglik <- function(fit, par, reps, seed, alpha = NULL) {
-  N <- fit$N
-  T <- fit$T
-  I <- Matrix::Diagonal(N)
-  beta <- par[colnames(fit$X)]
-  rho <- if ("rho" %in% names(par)) par[["rho"]] else 0
-  lambda <- if ("lambda" %in% names(par)) par[["lambda"]] else 0
-  marginal <- fit$effects != "pooled" && is.null(alpha)
-  xb <- matrix(fit$X %*% beta, N, T) + (if (is.null(alpha)) 0 else alpha)
-  S <- lapply(seq_len(T), function(t) I - rho * .psp_Wt(fit$W, t))
-  R <- lapply(seq_len(T), function(t) {
-    if (lambda == 0) I else I - lambda * .psp_Wt(fit$M, t)
-  })
-  # full operator: blocks A_t = R_t S_t, and -gamma R_t below the diagonal
-  # for latent AR(1); the latent mean solves A m = (R_t X_t beta)_t
-  A <- Matrix::bdiag(Map(function(r, s) r %*% s, R, S))
-  gamma <- if ("lag_z" %in% names(par)) par[["lag_z"]] else 0
-  if (gamma != 0) {
-    sub <- Matrix::bdiag(c(lapply(R[-1], function(r) -gamma * r), list(Matrix::Matrix(0, N, N))))
-    A <- A + rbind(Matrix::Matrix(0, N, N * T), sub[seq_len(N * (T - 1)), , drop = FALSE])
-  }
-  Rall <- do.call(rbind, R)
-  m <- as.vector(Matrix::solve(A, as.vector(Matrix::bdiag(R) %*% as.vector(xb))))
-  Q <- Matrix::crossprod(A)
-  if (marginal) {
-    C <- -Matrix::crossprod(A, Rall)
-    B <- if ("phi" %in% names(par)) I - par[["phi"]] * .psp_Wt(fit$W, 1) else I
-    Qaa <- Reduce(`+`, lapply(R, Matrix::crossprod)) +
-      Matrix::crossprod(B) / par[["sigma_alpha"]]^2
-    Q <- rbind(cbind(Q, C), cbind(Matrix::t(C), Qaa))
-    m <- c(m, numeric(N))
-  }
-  # bounds of the latent outcomes; missing outcomes and alpha are unrestricted
-  kap <- if (inherits(fit, "psoprobit")) .psp_cutpoints(fit, par) else c(-Inf, 0, Inf)
-  code <- if (inherits(fit, "psoprobit")) fit$y else fit$y + 1L
-  lo <- ifelse(is.na(code), -Inf, kap[pmax(code, 1L, na.rm = TRUE)])
-  hi <- ifelse(is.na(code), Inf, kap[pmin(code + 1L, length(kap), na.rm = TRUE)])
-  if (marginal) {
-    lo <- c(lo, rep(-Inf, N))
-    hi <- c(hi, rep(Inf, N))
-  }
-  # Fill-reducing order, except that the unrestricted coordinates (alpha,
-  # missing outcomes) go first: GHK draws from the last coordinate to the
-  # first, so they are drawn last and integrated out exactly instead of adding
-  # simulation noise.
-  # The free block is ordered by a fill-reducing permutation of its own
-  # precision, the rest by one of its pattern after the free block is
-  # eliminated (approximated by Q_rr + C C').
-  Q <- methods::as(Matrix::forceSymmetric(Q), "CsparseMatrix")
-  free <- which(is.infinite(lo) & is.infinite(hi))
-  rest <- setdiff(seq_along(lo), free)
-  amd <- function(P) {  # fill-reducing order of the pattern of P
-    P <- methods::as(methods::as(Matrix::forceSymmetric(P), "generalMatrix"), "CsparseMatrix")
-    P@x[] <- 1
-    P <- P + Matrix::Diagonal(nrow(P), max(Matrix::rowSums(P)) + 1)  # diagonally dominant
-    Matrix::Cholesky(P, perm = TRUE, LDL = FALSE, super = FALSE)@perm + 1L
-  }
-  p <- if (length(free)) {
-    C <- Q[rest, free, drop = FALSE]
-    pr <- Matrix::tcrossprod(abs(C))
-    c(free[amd(Q[free, free, drop = FALSE])], rest[amd(abs(Q[rest, rest]) + pr)])
-  } else {
-    amd(Q)
-  }
-  ch <- Matrix::Cholesky(Q[p, p], perm = FALSE, LDL = FALSE, super = FALSE)
-  L <- methods::as(methods::as(ch, "CsparseMatrix"), "generalMatrix")
-  # without random effects to integrate out (or latent dynamics linking
-  # them), the periods are independent
-  block <- if (marginal || gamma != 0) rep(0L, length(lo)) else rep(seq_len(T) - 1L, each = N)
-  nb <- max(block) + 1L
-  logw <- .psp_with_rng_restore({
-    set.seed(seed)
-    psp_ghk_cpp(L, (lo - m)[p], (hi - m)[p], block[p], nb, reps)
-  })
-  ll <- 0
-  rel2 <- 0
-  for (b in seq_len(nb)) {
-    mx <- max(logw[, b])
-    w <- exp(logw[, b] - mx)
-    ll <- ll + mx + log(mean(w))
-    rel2 <- rel2 + (stats::sd(w) / mean(w))^2 / reps
-  }
-  list(ll = ll, mcse = sqrt(rel2))
+# given alpha (draws x N, conditional) only the z blocks remain. The
+# unrestricted coordinates (alpha, missing outcomes) are ordered first, so
+# GHK integrates them out exactly; independent periods are simulated as
+# separate blocks. Every draw uses the same random numbers, from 'seed'.
+.psp_ghk_loglik <- function(fit, pm, reps, seed, alpha = NULL) {
+  parts <- .psp_post_map(psp_rs_ghk, .psp_rs_post_model(fit, NULL, NULL),
+                         .psp_rs_draws(fit, pm, alpha), y = as.integer(fit$y),
+                         reps = as.integer(reps), seed = .psp_rs_seeds(seed, 1))
+  list(ll = unlist(lapply(parts, `[[`, "ll")), mcse = unlist(lapply(parts, `[[`, "mcse")))
 }
 
 .psp_ghk_normal_only <- function(fit) {

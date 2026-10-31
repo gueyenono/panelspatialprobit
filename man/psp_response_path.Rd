@@ -70,6 +70,9 @@ through the latent mean, \eqn{\Delta m_{t+h} = (\gamma S^{-1})^h
 \Delta m_t}, and the responses are computed exactly from the reduced form
 (no simulation; \code{nsim} is unused). Static models are accepted too; their
 responses vanish after the shock ends.
+
+The posterior draws are processed in parallel under the user's
+\code{\link[future:plan]{future::plan()}} (see "Parallel post-processing" in \code{\link[=psp_control]{psp_control()}}).
 }
 \examples{
 W <- psp_weights(rook_weights(5, 5), style = "W")

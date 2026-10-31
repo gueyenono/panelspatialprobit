@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0, R1 and R2 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R3 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R3 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R4 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -125,6 +125,7 @@ Each decision has a recommendation; this plan assumes it unless the maintainer s
 | R-D8 | Order relative to the first CRAN submission | **Decided: the first CRAN submission is the Rust version**, after R5. The submission itself is deferred, with no date (maintainer, 2026-10-30). The C++ version is never released on CRAN. Consequences: the first-submission review also covers the Rust build. The build follows CRAN's rules from R0 on (cargo home inside the build tree, `-j 2`, rustc version in the log, Rust version check), but the CRAN-only work waits for §6.11 "Before the CRAN submission": vendoring, the CRAN flavour check, win-builder/mac-builder/rhub, and `cran-comments.md`. | Submit the C++ version first and ship Rust in the next release (the original recommendation: earlier submission, and the build system is not reviewed with a first submission). |
 | R-D9 | Reproducibility contract | **Same seed and same machine and build give identical draws, whatever `cores`/threads**, as tested now (`test-fit.R`). Not promised: identity with the C++ version, or across CPUs. faer picks SIMD kernels at run time, and the eigen log-det path already depends on the BLAS. Documented in NEWS and `?psp_control`. | Bitwise identity across CPUs (would rule out faer in the sampler and the log-det; not worth it). |
 | R-D10 | Data across the boundary | **R unpacks `dgCMatrix` into plain vectors** (`p`, `i`, `x`, `n`), and Rust copies its inputs into owned structures once per call. That costs O(nnz + nk), which is negligible against the work. Outputs are built in Rust and copied into R objects on the main thread. **No persistent external pointers**, since they do not survive `saveRDS()`. | Zero-copy borrowing of R memory (lifetimes tied to R objects; R memory touched from worker threads). |
+| R-D11 | Post-processing parallelism | **Decided by the maintainer (2026-10-31): the {future} package.** `psp_impacts()`, `predict()`, `psp_ppc()`, `psp_response_path()`, `psp_loglik()` (and `logLik()`, `psp_dic()`) follow the user's `future::plan()`; the default `sequential` plan runs in the calling process. R splits the draws into fixed chunks (whatever the plan, so results do not depend on it), and each future calls a single-threaded Rust function on its chunk; chunks that draw random numbers get their own L'Ecuyer-CMRG stream from R (`.psp_streams()`), so `future.seed` is not needed. `future` goes in `Imports`. The sampler's chains stay on Rust threads (`cores`, R-D4). | `fit$control$cores` with an `options(panelspatialprobit.threads = )` override, on Rust threads (the earlier recommendation; lower overhead, no new dependency); a `cores =` argument per function. |
 
 ## 6.4 Target layout
 
@@ -514,16 +515,16 @@ One step per row, in the order to do them.
 | 22 | R2 | Time-varying weights. *Done 2026-10-31 (same draws as C++; with sparse random effects within 0.5 MCSE).* | 21 | Claude |
 | 23 | R2 | Latent AR. *Done 2026-10-31 (same draws as C++ for SAR random effects and pooled SEM; SEM random effects within 1.5 MCSE).* | 22 | Claude |
 | 24 | R2 | Full testthat suite with `NOT_CRAN=true`; `bench_models.R` against step 4; the SBC smoke subset; interrupt, progress and `mclapply` checks; R2 exit. *Done 2026-10-31: see "R2 results" below; R2 exit met.* | 23 | Claude |
-| 25 | R3 | Choose how users set the post-processing threads (recommended: `fit$control$cores`, overridable with `options(panelspatialprobit.threads = )`) | — | You |
-| 26 | R3 | Move the current R reduced form, impacts and predict code to `R/reference_postproc.R`; start `test-postproc-oracle.R` | 24 | Claude |
-| 27 | R3 | Log-determinant grids (sparse; eigen grid evaluation) | 24 | Claude |
-| 28 | R3 | Reduced form (`rf`: block, t mixture, latent AR), with oracle tests | 26 | Claude |
-| 29 | R3 | Impacts | 25, 28 | Claude |
-| 30 | R3 | `predict()` | 25, 28 | Claude |
-| 31 | R3 | `psp_ppc()` replicates | 25, 28 | Claude |
-| 32 | R3 | Response paths | 25, 28 | Claude |
-| 33 | R3 | GHK likelihood | 24, 25 | Claude |
-| 34 | R3 | `test-threads.R`; post-processing benchmarks against §6.2; R3 exit | 27, 29-33 | Claude |
+| 25 | R3 | Choose how users set the post-processing threads. *Decided 2026-10-31: {future} (R-D11).* | — | You |
+| 26 | R3 | Move the current R reduced form, impacts and predict code to `R/reference_postproc.R`; start `test-postproc-oracle.R` *Done 2026-10-31: `.psp_ref_*` (log-det, reduced form, latent AR, density weights, impacts and predict loops), verbatim.* | 24 | Claude |
+| 27 | R3 | Log-determinant grids (sparse; eigen grid evaluation) *Done 2026-10-31: `pspcore::lndet` (simplicial LU per point; eigen grid sum).* | 24 | Claude |
+| 28 | R3 | Reduced form (`rf`: block, t mixture, latent AR), with oracle tests *Done 2026-10-31: `pspcore::rf`; oracle cases: SAR/SEM-RE, SDM, SARAR, spatial RE, t errors, time-varying W, latent AR (also with SEM and t), exact and probe paths, with and without alpha.* | 26 | Claude |
+| 29 | R3 | Impacts *Done 2026-10-31 (`pspcore::post`).* | 25, 28 | Claude |
+| 30 | R3 | `predict()` *Done 2026-10-31: block sums of 8 draws, added in R in block order.* | 25, 28 | Claude |
+| 31 | R3 | `psp_ppc()` replicates *Done 2026-10-31 (`pspcore::simulate::ppc_draw`; one stream per draw).* | 25, 28 | Claude |
+| 32 | R3 | Response paths *Done 2026-10-31 (`pspcore::simulate::response_draw`; latent-AR branch via `psp_rs_probs`).* | 25, 28 | Claude |
+| 33 | R3 | GHK likelihood *Done 2026-10-31 (`pspcore::ghk`; faer AMD on the free and restricted blocks, unordered simplicial Cholesky).* | 24, 25 | Claude |
+| 34 | R3 | `test-threads.R`; post-processing benchmarks against §6.2; R3 exit *Done 2026-10-31: see "R3 results" below; R3 exit met except GHK with 4 workers (2.7-2.9x for ≥ 3x).* | 27, 29-33 | Claude |
 | 35 | R4 | Full SBC for every variant, with replication runs for marginal results | 34 | Claude |
 | 36 | R4 | Monte Carlo, `spatialprobit` cross-checks, Wang and Kockelman subset, benchmarks (alongside 35) | 34 | Claude |
 | 37 | R4 | `vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change; R4 exit | 35, 36 | Claude |
@@ -617,13 +618,21 @@ Port in this order, each with its cross-build check (§6.7) before the next:
 - **SBC smoke subset** (100 replications: `sar_re_ord4`, `sarar_re_ord3`, `sar_sre_bin`, `sarar_t_re_ord3`, `sem_lat_re_ord3`): no rank test below the multiple-testing threshold (smallest p = 0.011 of 33); the three variants with p < 0.05 were rerun with `SBC_SEED_OFFSET=1` and 300 replications, all p > 0.05.
 - **Threads, interrupts, fork** (`validation/rust_port/check_fit_threads.R`): Ctrl-C during a 4-chain, 4-thread fit stops within 0.1 s with an R interrupt and no threads left; progress is printed for every parallel chain; `psprobit()` inside `mclapply()` gives the parent's draws; `cores = 4` equals `cores = 1`. On this machine a forked child that calls `eigen()` after the parent did deadlocks in the BLAS (also in plain R, with no package code), so the check uses the sparse log-determinant; the C++ engine's `mcmapply` path had the same exposure.
 
+**R3 results (2026-10-31):**
+
+- **Parallelism (R-D11).** Rust post-processing calls are single-threaded; `.psp_post_map()` (`R/rust.R`) cuts the draws into blocks (1 draw, or 8 for `predict()`'s sums) and runs one `future::future()` per group of consecutive blocks, or calls Rust directly under the sequential plan. Per-draw results and block sums do not depend on the plan: `test-threads.R` checks impacts, unit impacts, predict, PPC, response paths and the GHK likelihood for identity between `sequential` and `multisession` with 2 workers (also checked by hand with `multicore`, 3 workers). Random numbers: one L'Ecuyer-CMRG stream per draw (PPC, response paths), or the same stream for every draw (GHK, common random numbers), from `.psp_rs_seeds()`. With `seed = NULL`, PPC and response paths draw their base seed from the current RNG state, which is left unchanged, as before; the replicates differ from the R version for the same seed.
+- **Oracle** (`test-postproc-oracle.R`, 375 checks): Rust log-det grids, reduced form (every quantity, both paths, with and without alpha), impacts (population, unit, LeSage-Pace, by period) and predict match `R/reference_postproc.R` to 1e-10 (observed differences about 3e-16), for binary and ordered models.
+- **Engine.** `pspcore::sparse::SparseLu`: faer LU with the column ordering computed once; `new()` lets faer choose a supernodal factor (2x faster than simplicial for the 202-column probe solve at N = 10,000), `new_simplicial()` exposes `U` for the log-determinant. `RfContext` holds one filter per distinct W and M and refactorises only when the coefficient changes. *Found:* faer 0.24.4's `SymmetricOrdering::Identity` misreads a lower-triangle input (panic in the symbolic Cholesky); `SparseChol::new_unordered()` passes the identity as a custom ordering.
+- **Speed** (`validation/bench/rust_r3_2026-10-31.txt`): impacts at N = 1,000 0.61 s (C++/R 2.11 s), 0.24-0.33 s with 4 workers; predict 0.39 s (1.85); PPC replicates 0.25 s, whole call 0.47 s (3.71; the statistics stay in R); response paths 3.7 s (66 s), 1.0 s with 4 workers; GHK 2.2 s (2.8), 0.74-0.80 s with 4 workers (2.7-2.9x: ten draws over four workers is at most 3.3x); impacts at N = 10,000 4.1 s (19 s), 2.0 s with 4 multicore workers. Port changes behind the gains, all with identical results: no solves for probe columns that are not needed (impact columns outside impacts; UK when it equals UG), the response-path sd once per draw and weight matrix, one tail for one-sided GHK intervals.
+- **On this machine** the nix `.libPaths()` is 55,536 characters, and parallelly launches all PSOCK workers in one command, which fails beyond 2 workers (the 128 KiB argument limit). `R_PARALLELLY_MAKENODEPSOCK_SETUP_STRATEGY=sequential` avoids it.
+
 ### R3: Post-processing (L)
 
 Steps 25-34.
 
-- [ ] Decide how users set post-processing threads (maintainer). Recommended: `fit$control$cores`, overridable with `options(panelspatialprobit.threads = )`. Document in `?psp_control`.
-- [ ] Move the current R reduced form, impacts and predict code to `R/reference_postproc.R` (oracle).
-- [ ] Port in this order, switching the R caller over at each step: `lndet` (sparse, and the eigen grid evaluation), `rf` (block, latent AR, mixture), then `impacts`, `predict`, `ppc`, `response` and `ghk`. Each port adds its cases to `test-postproc-oracle.R` and `test-threads.R` as it lands.
+- [x] Decide how users set post-processing threads (maintainer). Decided 2026-10-31: {future} (R-D11); document `future::plan()` in `?psp_control` and in each post-processing function.
+- [x] Move the current R reduced form, impacts and predict code to `R/reference_postproc.R` (oracle).
+- [x] Port in this order, switching the R caller over at each step: `lndet` (sparse, and the eigen grid evaluation), `rf` (block, latent AR, mixture), then `impacts`, `predict`, `ppc`, `response` and `ghk`. Each port adds its cases to `test-postproc-oracle.R` and `test-threads.R` as it lands.
 
 **Exit:** oracle tests pass (1e-10); the existing impacts, loglik, PPC and response tests pass; the §6.2 post-processing targets are met.
 

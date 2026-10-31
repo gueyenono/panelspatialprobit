@@ -192,25 +192,20 @@ predict.psprobit <- function(object, newdata = NULL, type = c("prob", "link", "c
   if (!is.null(newdata)) object <- .psp_with_newdata(object, newdata)
   idx <- .psp_draw_subset(object, draws)
   pm <- .psp_par_matrix(object)[idx, , drop = FALSE]
-  probes <- .psp_probes(object)
-  mix <- .psp_t_mix(object)
   ordered <- inherits(object, "psoprobit")
   n <- object$N * object$T
+  ncat <- if (ordered) object$J else 1L
+  # block sums (Rust), added in block order
+  parts <- .psp_post_map(psp_rs_predict, .psp_rs_post_model(object), .psp_rs_draws(object, pm),
+                         block = 8L)
   acc_m <- numeric(n)
-  acc_p <- matrix(0, n, if (ordered) object$J else 1)
-  for (d in seq_along(idx)) {
-    rf <- .psp_reduced_form(object, pm[d, ], probes, mix = mix)
-    s <- rf$s
-    acc_m <- acc_m + rf$m
-    if (ordered) {
-      kap <- .psp_cutpoints(object, pm[d, ])
-      for (j in seq_len(object$J)) {
-        acc_p[, j] <- acc_p[, j] + .psp_mix_mean(function(s) {
-          stats::pnorm((kap[j + 1] - rf$m) / s) - stats::pnorm((kap[j] - rf$m) / s)
-        }, s)
-      }
-    } else {
-      acc_p[, 1] <- acc_p[, 1] + .psp_mix_mean(function(s) stats::pnorm(rf$m / s), s)
+  acc_p <- matrix(0, n, ncat)
+  for (part in parts) {
+    link <- matrix(part$link, n)
+    prob <- array(part$prob, c(n, ncat, ncol(link)))
+    for (b in seq_len(ncol(link))) {
+      acc_m <- acc_m + link[, b]
+      acc_p <- acc_p + prob[, , b]
     }
   }
   acc_m <- acc_m / length(idx)

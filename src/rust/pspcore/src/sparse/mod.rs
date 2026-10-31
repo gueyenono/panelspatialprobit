@@ -2,11 +2,13 @@
 
 mod chol;
 mod csc;
+mod lu;
 mod pattern;
 mod weights;
 
 pub use chol::SparseChol;
 pub use csc::Csc;
+pub use lu::SparseLu;
 pub use pattern::FilterPattern;
 pub use weights::Weights;
 

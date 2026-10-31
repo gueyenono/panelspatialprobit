@@ -15,6 +15,7 @@
 
 mod convert;
 mod interrupt;
+mod post;
 mod run;
 
 use pspcore::dist::{dnorm, pnorm, qnorm_std, rtnorm};

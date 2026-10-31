@@ -7,6 +7,7 @@
 use super::Csc;
 use crate::PspError;
 use faer::dyn_stack::{MemBuffer, MemStack};
+use faer::perm::PermRef;
 use faer::sparse::linalg::cholesky::{
     factorize_symbolic_cholesky, CholeskySymbolicParams, SymbolicCholesky, SymbolicCholeskyRaw,
     SymmetricOrdering,
@@ -32,8 +33,28 @@ pub struct SparseChol {
 
 impl SparseChol {
     /// Analyses the pattern of the lower triangle `lower` (row >= column
-    /// entries only; the values are not used).
+    /// entries only; the values are not used), with an AMD ordering.
     pub fn new(lower: &Csc) -> Result<Self, PspError> {
+        Self::build(lower, SymmetricOrdering::Amd)
+    }
+
+    /// As [`Self::new`], keeping the given order (`Q = I`): for callers that
+    /// order the coordinates themselves (GHK). The identity is passed as a
+    /// custom ordering: faer 0.24.4's `SymmetricOrdering::Identity` skips the
+    /// conversion of a lower-triangle input and misreads it.
+    pub fn new_unordered(lower: &Csc) -> Result<Self, PspError> {
+        let id: Vec<usize> = (0..lower.n_rows).collect();
+        let perm = PermRef::new_checked(&id, &id, lower.n_rows);
+        Self::build(lower, SymmetricOrdering::Custom(perm))
+    }
+
+    /// The factor L (simplicial CSC; the diagonal is the first entry of each
+    /// column): column pointers, row indices and values.
+    pub fn factor(&self) -> (&[usize], &[usize], &[f64]) {
+        (&self.l_colptr, &self.l_rowind, &self.l_val)
+    }
+
+    fn build(lower: &Csc, ordering: SymmetricOrdering<usize>) -> Result<Self, PspError> {
         let n = lower.n_rows;
         let fail =
             |e: &dyn std::fmt::Debug| PspError::InvalidInput(format!("sparse Cholesky: {e:?}"));
@@ -47,7 +68,7 @@ impl SparseChol {
         let symbolic = factorize_symbolic_cholesky(
             pat.as_ref(),
             Side::Lower,
-            SymmetricOrdering::Amd,
+            ordering,
             CholeskySymbolicParams {
                 supernodal_flop_ratio_threshold: SupernodalThreshold::FORCE_SIMPLICIAL,
                 ..Default::default()
@@ -155,6 +176,37 @@ impl SparseChol {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn unordered_factor_keeps_the_order() {
+        // tridiagonal(-1, 3, -1): L is lower bidiagonal in the given order
+        let n = 5;
+        let (mut colptr, mut rowind, mut val) = (vec![0], Vec::new(), Vec::new());
+        for j in 0..n {
+            rowind.push(j);
+            val.push(3.0);
+            if j + 1 < n {
+                rowind.push(j + 1);
+                val.push(-1.0);
+            }
+            colptr.push(rowind.len());
+        }
+        let lower = Csc::from_parts(n, n, colptr, rowind, val.clone()).unwrap();
+        let mut ch = SparseChol::new_unordered(&lower).unwrap();
+        ch.factorize(&val).unwrap();
+        let (lp, li, lv) = ch.factor();
+        let mut d = 3.0f64.sqrt();
+        for j in 0..n {
+            assert_eq!(li[lp[j]], j);
+            assert!((lv[lp[j]] - d).abs() < 1e-14);
+            if j + 1 < n {
+                assert_eq!(&li[lp[j] + 1..lp[j + 1]], &[j + 1]);
+                let off = -1.0 / d;
+                assert!((lv[lp[j] + 1] - off).abs() < 1e-14);
+                d = (3.0 - off * off).sqrt();
+            }
+        }
+    }
 
     #[test]
     fn solves_and_draw_covariance() {
