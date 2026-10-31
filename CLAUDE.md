@@ -15,7 +15,7 @@ The design and roadmap are in `plan/`:
 | `plan/03_package_architecture.md` | API and layout |
 | `plan/04_validation_and_testing.md` | Testing |
 | `plan/05_roadmap.md` | Phases and checklists |
-| `plan/06_rust_integration.md` | Rust migration (decided 2026-10-30; R0 under way on branch `rust`, C++ reference tagged `cpp-final`) |
+| `plan/06_rust_integration.md` | Rust migration (decided 2026-10-30; R0-R4 done on branch `rust`, C++ reference tagged `cpp-final`) |
 
 Read the relevant plan file before changing a sampler block. `literature/` and `related_packages/` hold reference papers and third-party package sources; both are excluded from the build.
 

@@ -98,12 +98,13 @@ knitr::kable(low, row.names = FALSE, col.names = c("variant", "seed offset", "pa
                                                     "p", "median max R-hat"))
 ```
 
-Two of them come from the latent AR model with SAR at the default chain length
-(red in the right panel). There the ranks of the latent AR coefficient are
+It comes from the latent AR model with SAR at the default chain length (red
+in the right panel). There the ranks of the latent AR coefficient are
 U-shaped, and the failures concentrate in the replications whose chains had
 not converged (max $\hat R \geq 1.02$): the sampler mixes slowly, rather than
-targeting the wrong distribution. With chains three times as long, the same
-variant passes:
+targeting the wrong distribution. A replication with other seeds passes
+(p = `r round(sbc$p[sbc$variant == "sar_lat_re_bin" & sbc$parameter == "lag_z" & sbc$seed_offset == 1], 3)`),
+and so does the same variant with chains three times as long:
 
 ```{r, fig.width = 7, fig.height = 2.6, fig.alt = "Rank histograms of the latent AR coefficient at two chain lengths"}
 rank_hist <- function(v, p, main, off = 0) {
@@ -119,8 +120,7 @@ rank_hist("sar_lat_re_bin_long", "lag_z", "lag_z, chains 3x as long")
 par(op)
 ```
 
-The third is a cut-point of the SARAR model with time-varying weights; a
-replication with other seeds passes (p = 0.874). SARAR models with
+SARAR models with
 $M = W$ show borderline results for $\rho$ and $\lambda$ at the default chain
 length, again from slow mixing (the two parameters are nearly
 interchangeable); this is why `?psprobit` asks for longer chains for them.
@@ -221,7 +221,7 @@ the RMSE and interval widths, as it should.
 The dynamic designs (`dyn_*`) use one data-generating process, with state
 dependence ($\gamma = 0.8$, `lag_y`) and random effects
 ($\sigma_\alpha = 0.8$), and fit three models to it. The Wooldridge
-random-effects model recovers $\gamma$ (bias 0.01, coverage 0.93). The pooled
+random-effects model recovers $\gamma$ (bias 0.01, coverage 0.92). The pooled
 dynamic model attributes the heterogeneity to state dependence: $\gamma$ is
 overstated by 0.31 and the slopes are biased towards zero, so its intervals
 almost never cover the truth. The static random-effects model, which
@@ -291,10 +291,11 @@ drift with $\lambda$ and $\rho$: $\sigma^2$ up to 1.8, and $\rho$ understated
 when it is small. Their heteroskedastic design and shorter chains differ from
 ours, so this does not locate the source of their bias.
 
-When $\rho = 0.9$, about two thirds of the fits still have $\hat R \geq 1.05$
-at our chain length. The effects are then nearly a common level shared by all
-units, which trades off against the intercept, so the thresholds (not the
-slopes) mix slowly. Their RMSE is about 0.6, against 0.2 elsewhere. As
+When $\rho = 0.9$, two thirds to four fifths of the fits still have
+$\hat R \geq 1.05$ at our chain length. The effects are then nearly a common
+level shared by all units, which trades off against the intercept, so the
+thresholds (not the slopes) mix slowly. Their RMSE is 0.5 to 0.7, against 0.3
+or less elsewhere. As
 `?psprobit` advises, strongly autocorrelated effects need longer chains.
 
 ## 4. Cross-checks against other packages
@@ -310,7 +311,7 @@ agree up to Monte Carlo error.
   within 0.65 posterior standard deviations for all ten parameters, with
   `spatialprobit` started from good values (its defaults fail on these data).
   Given the SBC result above, exact agreement is not expected.
-  `panelspatialprobit` was about 7 times faster.
+  `panelspatialprobit` was about 8 times faster.
 - **`spatialprobit::sarorderedprobit`** (simulated pooled SAR ordered probit,
   20 × 20 grid, $T = 1$, $J = 4$, near-diffuse priors): every posterior mean
   agrees within 0.07 posterior standard deviations. The cut-points of
@@ -344,8 +345,8 @@ knitr::kable(bench_tab, row.names = FALSE, digits = 1,
 ```
 
 The ordered model costs about a quarter more per iteration than the binary
-one, mainly for the cut-point updates. The SEM model costs two to two and a
-half times as much, mainly because the precision of the random effects
+one, mainly for the cut-point updates. The SEM model costs about twice as
+much, mainly because the precision of the random effects
 depends on $\lambda$ and must be factorised again in every iteration. At
 $N = 10{,}000$ and $T = 20$ (200,000 observations), 10,000 iterations take
 about `r round(10000 * bench$ms_per_iter[bench$N == 10000 & bench$design == "sar_binary"] / 6e4, 1)`

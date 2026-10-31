@@ -1,0 +1,66 @@
+panelspatialprobit 0.0.0.9000, R 4.6.0; one chain on one core, times include warm-up
+
+[sar_binary] N = 1000, T = 10 (n = 10000): 10000 iterations in 13.5 s (1.35 ms/iter); ESS/s 35.29-58.65
+    variable ess_bulk ess_per_sec
+ (Intercept)      528       39.12
+          x1      686       50.82
+          x2      681       50.46
+          x3      703       52.11
+          x4      792       58.65
+         rho      616       45.66
+ sigma_alpha      476       35.29
+
+[sar_ordered] N = 1000, T = 10 (n = 10000): 10000 iterations in 17.5 s (1.75 ms/iter); ESS/s 22.96-80.03
+    variable ess_bulk ess_per_sec
+ (Intercept)      401       22.96
+          x1     1064       60.87
+          x2      996       57.02
+          x3     1398       80.03
+          x4     1197       68.50
+         rho     1019       58.31
+ sigma_alpha      766       43.85
+    cut[2|3]      492       28.13
+    cut[3|4]      500       28.62
+
+[sem_binary] N = 1000, T = 10 (n = 10000): 10000 iterations in 24.1 s (2.41 ms/iter); ESS/s 9.03-40.51
+    variable ess_bulk ess_per_sec
+ (Intercept)      977       40.51
+          x1      231        9.57
+          x2      347       14.39
+          x3      525       21.78
+          x4      464       19.23
+      lambda      218        9.03
+ sigma_alpha      265       10.97
+
+[sar_binary] N = 10000, T = 20 (n = 200000): 2000 iterations in 66.6 s (33.31 ms/iter); ESS/s 0.70-2.30
+    variable ess_bulk ess_per_sec
+ (Intercept)       47        0.70
+          x1      145        2.17
+          x2      103        1.55
+          x3      152        2.28
+          x4      153        2.30
+         rho      149        2.24
+ sigma_alpha      130        1.95
+
+[sar_ordered] N = 10000, T = 20 (n = 200000): 2000 iterations in 86.8 s (43.42 ms/iter); ESS/s 0.48-3.72
+    variable ess_bulk ess_per_sec
+ (Intercept)       42        0.48
+          x1      283        3.25
+          x2      236        2.71
+          x3      313        3.60
+          x4      257        2.95
+         rho      152        1.75
+ sigma_alpha      323        3.72
+    cut[2|3]       91        1.05
+    cut[3|4]       71        0.82
+
+[sem_binary] N = 10000, T = 20 (n = 200000): 2000 iterations in 149.8 s (74.91 ms/iter); ESS/s 0.48-1.35
+    variable ess_bulk ess_per_sec
+ (Intercept)      203        1.35
+          x1       82        0.55
+          x2       84        0.56
+          x3      111        0.74
+          x4      112        0.75
+      lambda       72        0.48
+ sigma_alpha      117        0.78
+

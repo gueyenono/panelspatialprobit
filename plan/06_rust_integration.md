@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R3 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R4 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R4 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R5 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -525,9 +525,9 @@ One step per row, in the order to do them.
 | 32 | R3 | Response paths *Done 2026-10-31 (`pspcore::simulate::response_draw`; latent-AR branch via `psp_rs_probs`).* | 25, 28 | Claude |
 | 33 | R3 | GHK likelihood *Done 2026-10-31 (`pspcore::ghk`; faer AMD on the free and restricted blocks, unordered simplicial Cholesky).* | 24, 25 | Claude |
 | 34 | R3 | `test-threads.R`; post-processing benchmarks against §6.2; R3 exit *Done 2026-10-31: see "R3 results" below; R3 exit met except GHK with 4 workers (2.7-2.9x for ≥ 3x).* | 27, 29-33 | Claude |
-| 35 | R4 | Full SBC for every variant, with replication runs for marginal results | 34 | Claude |
-| 36 | R4 | Monte Carlo, `spatialprobit` cross-checks, Wang and Kockelman subset, benchmarks (alongside 35) | 34 | Claude |
-| 37 | R4 | `vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change; R4 exit | 35, 36 | Claude |
+| 35 | R4 | Full SBC for every variant, with replication runs for marginal results *Done 2026-10-31: 30 variants x 500, replications for 17; see "R4 results" below.* | 34 | Claude |
+| 36 | R4 | Monte Carlo, `spatialprobit` cross-checks, Wang and Kockelman subset, benchmarks (alongside 35) *Done 2026-10-31 (the full Wang and Kockelman grid).* | 34 | Claude |
+| 37 | R4 | `vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change; R4 exit *Done 2026-10-31: R4 exit met.* | 35, 36 | Claude |
 | 38 | R5 | Delete the C++ files; drop Rcpp and RcppEigen from DESCRIPTION and NAMESPACE; archive the `validation/rust_port/` results | 37 | Claude |
 | 39 | R5 | Update the documentation listed under R5 | 38 | Claude |
 | 40 | R5 | Push; GitHub Actions clean on the three OSes (R5 exit) | 39 | You, or Claude when asked |
@@ -640,11 +640,20 @@ Steps 25-34.
 
 Steps 35-37.
 
-- [ ] Full SBC for every variant, with the same replication counts as the recorded runs, and a replication run (`SBC_SEED_OFFSET`) for any marginal result.
-- [ ] Monte Carlo, the `spatialprobit` cross-checks, the Wang and Kockelman subset (e.g. the rho = 0.6 and 0.9 cells), `bench_models.R`, `bench_large.R`, `bench_cutpoints.R`.
-- [ ] `validation/vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change.
+- [x] Full SBC for every variant, with the same replication counts as the recorded runs, and a replication run (`SBC_SEED_OFFSET`) for any marginal result.
+- [x] Monte Carlo, the `spatialprobit` cross-checks, the Wang and Kockelman subset (e.g. the rho = 0.6 and 0.9 cells), `bench_models.R`, `bench_large.R`, `bench_cutpoints.R`.
+- [x] `validation/vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change.
 
 **Exit:** every documented variant passes SBC (CLAUDE.md model support gate), and the Monte Carlo coverage and bias stay within the ranges recorded in `05`.
+
+**R4 results (2026-10-31):** all on the Rust engine (`validation/bench/rust_r4_2026-10-31.txt`); R4 exit met.
+
+- **SBC.** All 30 variants, 500 replications each (`sbc_2026-10-31`): no failed fit, median max R-hat at most 1.017; 17 of 185 rank tests have p < 0.05, the smallest is `sar_lat_re_bin` `lag_z` (p = 0.0008, as with C++ at 0.001: slow mixing at the default chain length; `sar_lat_re_bin_long` passes), and none is below the Bonferroni threshold (2.7e-4). Replications (`SBC_SEED_OFFSET=1`, 500 each) for the 15 variants with any p < 0.05 and for `sem_lat_re_ord3`, and offset 2 for `sarar_t_re_ord3`: smallest p = 0.012 of 121, 4 below 0.05; `lag_z` gives p = 0.081. Many p-values in the first run repeat the C++ ones, since seeds, true values and data are the same and most variants give the C++ draws (R2).
+- **Monte Carlo** (200 replications per design, `mc_2026-10-31`): every bias, RMSE and coverage within 0.01-0.02 of the C++ run (`mc_2026-10-27`); static designs biases at most 0.017, 90% coverage 0.88-0.92, within the `05` ranges; the dynamic designs as before (Wooldridge recovers `lag_y`, the pooled model overstates it by 0.31).
+- **Wang and Kockelman** (all 12 cells, 50 data sets): average posterior means within 0.05 and coverages within 0.06 of the C++ run (`wk_2026-10-29`; overall coverage 0.89 in both); at rho = 0.9 64-80% of fits have max R-hat >= 1.05 (C++ 64-70%), Monte Carlo variation in a regime that needs longer chains.
+- **Cross-checks.** `sarorderedprobit`: identical to the C++ record (same draws). Katrina: means differ from the C++ run by at most 0.03 posterior sd (Monte Carlo error; ESS about 1,000-2,600), and from `spatialprobit` by at most 0.59 sd, as before.
+- **Benchmarks** (`models_`, `large_`, `cutpoints_2026-10-31`): per iteration against the C++ record, SAR 1.31 -> 1.35 ms, ordered 1.66 -> 1.75, SEM 2.69 -> 2.41; at N = 10,000, 32.5 -> 33.3, 40.7 -> 43.4, 74.4 -> 74.9; cut-point ESS ratios unchanged. A first `bench_models.R` run right after the 2-hour SBC and Monte Carlo jobs was 8-15% slower; C++ and Rust run alternately in one session gave the R2 gaps (SAR +4%, ordered +8%, SEM -8%), so it was rerun on an idle machine. `bench_large.R`: impacts for 50 draws 19 s -> 4 s.
+- **Vignette** (`vignette_data.R` now keeps the newest run per variant and seed offset): every SBC row is from Rust; the text changed only where a number did (one rank test below 0.01 instead of three; Wooldridge coverage 0.92; Katrina 8x faster; the rho = 0.9 R-hat shares and RMSEs in the Wang and Kockelman section; SEM about twice the SAR cost).
 
 ### R5: Remove C++, documentation (S)
 

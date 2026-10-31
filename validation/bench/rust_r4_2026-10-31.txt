@@ -1,0 +1,30 @@
+Rust engine, phase R4 validation gate (plan/06 steps 35-37), 2026-10-31.
+Build: branch rust, ~/.cache/panelspatialprobit/lib_rust; same machine as
+rust_baseline_2026-10-30.txt. Result files under validation/*/results/ are not
+committed; the summaries are in plan/06 "R4 results" and vignettes/validation-*.csv.
+
+SBC (run_sbc.R 500 7): 30 variants, 0 failed fits, median max R-hat <= 1.017;
+  17 of 185 rank tests p < 0.05, min p = 0.0008 (sar_lat_re_bin lag_z; C++ 0.001);
+  Bonferroni threshold 2.7e-4. Replications (offset 1 for 16 variants, offset 2
+  for sarar_t_re_ord3): 121 tests, 4 p < 0.05, min p = 0.012; lag_z p = 0.081.
+Monte Carlo (run_mc.R 200 7): biases and coverage within 0.01-0.02 of mc_2026-10-27.
+Wang & Kockelman (run_wk.R 50 7): mean estimates within 0.05, coverage within 0.06
+  of wk_2026-10-29; overall coverage 0.89 (C++ 0.89).
+spatialprobit_ordered.R: identical estimates to the 2026-10-29 record.
+spatialprobit_katrina.R: within 0.03 posterior sd of the 2026-10-30 record.
+
+Sampler time per iteration, C++ record (models_2026-10-29) -> Rust (models_2026-10-31):
+  SAR binary,  N = 1,000:   1.31 ->  1.35 ms
+  SAR ordered, N = 1,000:   1.66 ->  1.75 ms
+  SEM binary,  N = 1,000:   2.69 ->  2.41 ms
+  SAR binary,  N = 10,000: 32.51 -> 33.31 ms
+  SAR ordered, N = 10,000: 40.71 -> 43.42 ms
+  SEM binary,  N = 10,000: 74.44 -> 74.91 ms
+A first run just after the SBC and Monte Carlo jobs was 8-15% slower. C++
+(options(panelspatialprobit.engine = "cpp")) and Rust alternated in one session,
+3 rounds of 2,500 + 2,500 iterations, median ms/iter:
+  SAR  cpp 1.303  rust 1.359
+  ord  cpp 1.667  rust 1.803
+  SEM  cpp 2.678  rust 2.467
+bench_large.R: 33.7 ms/iter (C++ 32.9); impacts for 50 draws 4 s (C++/R 19 s).
+bench_cutpoints.R: ESS ratios as in cutpoints_2026-10-29 (J = 5 interior 76x, 18x).

@@ -12,20 +12,25 @@ sbc <- do.call(rbind, lapply(files, function(f) {
   res <- readRDS(f)
   offset <- sub(".*_offset([0-9]+)\\.rds$", "\\1", f)
   offset <- if (offset == f) 0L else as.integer(offset)
+  date <- sub("^sbc_([0-9-]+).*$", "\\1", basename(f))
   do.call(rbind, lapply(names(res), function(vn) {
     r <- res[[vn]]
     do.call(rbind, lapply(setdiff(colnames(r), "max_rhat"), function(p) {
       bins <- tabulate(cut(r[, p], breaks = seq(-0.5, L + 0.5, length.out = 11),
                            labels = FALSE), 10)
-      data.frame(variant = vn, seed_offset = offset, parameter = p, reps = nrow(r),
+      data.frame(variant = vn, seed_offset = offset, parameter = p, date = date,
+                 reps = nrow(r),
                  median_rhat = round(stats::median(r[, "max_rhat"]), 4),
                  p = signif(suppressWarnings(stats::chisq.test(bins)$p.value), 3),
                  t(stats::setNames(bins, paste0("b", 1:10))))
     }))
   }))
 }))
-# a variant run twice with the same seeds is the same result: keep one copy
+# one run per variant, seed offset and parameter: the newest (the current
+# engine), and within a date the one with the most replications
+sbc <- sbc[order(sbc$date, sbc$reps, decreasing = TRUE), ]
 sbc <- sbc[!duplicated(sbc[, c("variant", "seed_offset", "parameter")]), ]
+sbc <- sbc[order(sbc$variant, sbc$seed_offset), ]
 utils::write.csv(sbc, "vignettes/validation-sbc.csv", row.names = FALSE)
 
 # Monte Carlo: bias, RMSE, 90% coverage and width per design and parameter.
