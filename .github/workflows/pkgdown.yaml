@@ -33,6 +33,10 @@ jobs:
           extra-packages: any::pkgdown, local::.
           needs: website
 
+      # pkgdown renders every top-level .md file and has no option to skip one.
+      - name: Keep CLAUDE.md off the site
+        run: rm -f CLAUDE.md
+
       - name: Build site
         run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
         shell: Rscript {0}
