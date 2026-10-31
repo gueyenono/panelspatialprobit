@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); implementation not started. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date; implementation not started. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -122,7 +122,7 @@ Each decision has a recommendation; this plan assumes it unless the maintainer s
 | R-D5 | Migration strategy | **Feature branch `rust` plus a frozen C++ reference build.** Tag the last C++ commit (e.g. `cpp-final`), install it into its own library (`lib_cpp`), and compare across R processes (§6.10). This means two builds, not two backends. Rcpp's `RcppExports.cpp` and savvy's `init.c` would each define `R_init_panelspatialprobit`, and keeping both in one package would add work that is thrown away in R5. | A dual backend inside one package behind an internal option (needs merged native registration; useful only if the port must ship piecemeal). |
 | R-D6 | Scope | §6.5. | Port everything numeric (rejected: loses the reference sampler as an oracle and changes `sim_psprobit()` data). |
 | R-D7 | Minimum Rust version | **Decided: 1.84**, set by faer (released 2025-01-09). CRAN asks for testing with a cargo at least two years old, and preferably four; 1.84 turns two in January 2027. | An older faer line (older API, no fixes); dropping faer (R-D2 alternatives). |
-| R-D8 | Order relative to the first CRAN submission | **Decided: the first CRAN submission is the Rust version**, after R5. The C++ version is never released on CRAN. Consequences: the submission waits for R0 to R5; the first-submission review also covers the Rust build, so R0's platform proof and R5's `cran-comments.md` matter more; the rhub and win-builder checks (CLAUDE.md item 5) are run on the Rust build. | Submit the C++ version first and ship Rust in the next release (the original recommendation: earlier submission, and the build system is not reviewed with a first submission). |
+| R-D8 | Order relative to the first CRAN submission | **Decided: the first CRAN submission is the Rust version**, after R5. The submission itself is deferred, with no date (maintainer, 2026-10-30). The C++ version is never released on CRAN. Consequences: the first-submission review also covers the Rust build. The build follows CRAN's rules from R0 on (cargo home inside the build tree, `-j 2`, rustc version in the log, Rust version check), but the CRAN-only work waits for §6.11 "Before the CRAN submission": vendoring, the CRAN flavour check, win-builder/mac-builder/rhub, and `cran-comments.md`. | Submit the C++ version first and ship Rust in the next release (the original recommendation: earlier submission, and the build system is not reviewed with a first submission). |
 | R-D9 | Reproducibility contract | **Same seed and same machine and build give identical draws, whatever `cores`/threads**, as tested now (`test-fit.R`). Not promised: identity with the C++ version, or across CPUs. faer picks SIMD kernels at run time, and the eigen log-det path already depends on the BLAS. Documented in NEWS and `?psp_control`. | Bitwise identity across CPUs (would rule out faer in the sampler and the log-det; not worth it). |
 | R-D10 | Data across the boundary | **R unpacks `dgCMatrix` into plain vectors** (`p`, `i`, `x`, `n`), and Rust copies its inputs into owned structures once per call. That costs O(nnz + nk), which is negligible against the work. Outputs are built in Rust and copied into R objects on the main thread. **No persistent external pointers**, since they do not survive `saveRDS()`. | Zero-copy borrowing of R memory (lifetimes tied to R objects; R memory touched from worker threads). |
 
@@ -448,7 +448,7 @@ The tarball is not committed. The whole source tarball should stay under 5 MB, a
 - On Windows, `rustup target add x86_64-pc-windows-gnu`.
 - Add a `rust` job: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test -p pspcore`, `cargo deny check licenses`.
 - Add an MSRV job: `cargo +1.84 build -p pspr`.
-- Keep the three existing workflows. They have never run yet; that needs the GitHub repository (CLAUDE.md item 1).
+- Keep the three existing workflows; they first ran on 2026-10-30 (commit `05391bb`, C++ version).
 
 ## 6.10 Testing and validation
 
@@ -467,37 +467,102 @@ The tarball is not committed. The whole source tarball should stay under 5 MB, a
 
 ## 6.11 Phases
 
-Sizes are relative (S < M < L), as in `05`. Each phase starts when the previous exit criterion is met.
+Sizes are relative (S < M < L), as in `05`. R0 to R5 run in order, and each phase starts when the previous exit criterion is met. After R5, R6, R7 and the CRAN list can be done in any order.
+
+### Action sequence
+
+One step per row, in the order to do them.
+
+- **After** lists the steps that must be finished first. Steps whose prerequisites are met can run alongside each other.
+- **Who:** "You" is the maintainer. "Claude, when asked" marks git operations, which CLAUDE.md reserves for an explicit request; work on the `rust` branch is committed the same way, as steps finish.
+- The phase checklists below give the details of each step.
+
+| # | Phase | Step | After | Who |
+|---|---|---|---|---|
+| 1 | R0 | Check that the first CI run on `master` (C++ version, commit `05391bb`) passes, and fix it if not, so later failures can be blamed on Rust alone | — | Claude |
+| 2 | R0 | Tag the result `cpp-final` and create the branch `rust` from it | 1 | You, or Claude when asked |
+| 3 | R0 | Install `cpp-final` into a scratch library `lib_cpp`: the frozen reference | 2 | Claude |
+| 4 | R0 | Record the C++ baseline: `bench_models.R`, `bench_large.R`, a callgrind profile of the sampler blocks (`validation/bench/rust_baseline_<date>.txt`) | 3 | Claude |
+| 5 | R0 | Workspace skeleton: `pspcore`, `pspr`, `configure`/`configure.win`/`cleanup`, `Makevars.in`/`Makevars.win.in`, savvy wrappers, one exported function; `.gitignore` and `.Rbuildignore` entries; `SystemRequirements` and `Depends: R (>= 4.5)` | 2 | Claude |
+| 6 | R0 | Local `R CMD check --as-cran` on Linux; measure `codegen-units` and `lto`, install time and installed size | 5 | Claude |
+| 7 | R0 | Add Rust to the GitHub workflows: cargo cache, Windows target, a `rust` job (fmt, clippy, tests, licences), an MSRV job | 5 | Claude |
+| 8 | R0 | Commit and push `rust`, so GitHub Actions checks the skeleton on Linux, macOS and Windows | 6, 7 | You, or Claude when asked |
+| 9 | R0 | Fix platform failures until the R0 exit is met (each fix pushed as in step 8) | 8 | Claude |
+| 10 | R1 | `rng`, with `test-rng.R` and Rust unit tests | 9 | Claude |
+| 11 | R1 | `dist` (truncnorm, `pnorm`, `dnorm`); `psp_rs_rtnorm()` replaces `psp_rtnorm_cpp` in `test-truncnorm.R`; draws checked against `lib_cpp` | 10 | Claude |
+| 12 | R1 | `sparse` (CSC, weights, pattern updates) and the R helpers `.psp_csc()` and `.psp_rs_weights()` | 9 | Claude |
+| 13 | R1 | `par` and `pspr::run`: worker pool, cancel flag, interrupt polling, progress; interrupt check with `SIGINT` | 9 | Claude |
+| 14 | R1 | miri on `rng`, `dist` and `sparse`; R1 exit | 11, 12, 13 | Claude |
+| 15 | R2 | Cross-build harness `validation/rust_port/`: `lib_cpp` against the branch build, in separate R processes with the same seeds | 3, 14 | Claude |
+| 16 | R2 | Switch `.psp_fit` to `psp_rs_sample()` and port binary SAR/SLX/none with pooled and diagonal RE; unported variants stop with "not yet ported" on the branch | 15 | Claude |
+| 17 | R2 | Ordered outcomes, both cut-point samplers, scale move; `psp_rs_cut_kernel()` replaces `psp_cut_kernel_cpp` in `test-cutmove.R` | 16 | Claude |
+| 18 | R2 | t errors | 17 | Claude |
+| 19 | R2 | SDM (design path only) | 18 | Claude |
+| 20 | R2 | SEM, SDEM and SARAR (lambda, sparse RE block) | 19 | Claude |
+| 21 | R2 | Spatial random effects (phi) | 20 | Claude |
+| 22 | R2 | Time-varying weights | 21 | Claude |
+| 23 | R2 | Latent AR | 22 | Claude |
+| 24 | R2 | Full testthat suite with `NOT_CRAN=true`; `bench_models.R` against step 4; the SBC smoke subset; interrupt, progress and `mclapply` checks; R2 exit | 23 | Claude |
+| 25 | R3 | Choose how users set the post-processing threads (recommended: `fit$control$cores`, overridable with `options(panelspatialprobit.threads = )`) | — | You |
+| 26 | R3 | Move the current R reduced form, impacts and predict code to `R/reference_postproc.R`; start `test-postproc-oracle.R` | 24 | Claude |
+| 27 | R3 | Log-determinant grids (sparse; eigen grid evaluation) | 24 | Claude |
+| 28 | R3 | Reduced form (`rf`: block, t mixture, latent AR), with oracle tests | 26 | Claude |
+| 29 | R3 | Impacts | 25, 28 | Claude |
+| 30 | R3 | `predict()` | 25, 28 | Claude |
+| 31 | R3 | `psp_ppc()` replicates | 25, 28 | Claude |
+| 32 | R3 | Response paths | 25, 28 | Claude |
+| 33 | R3 | GHK likelihood | 24, 25 | Claude |
+| 34 | R3 | `test-threads.R`; post-processing benchmarks against §6.2; R3 exit | 27, 29-33 | Claude |
+| 35 | R4 | Full SBC for every variant, with replication runs for marginal results | 34 | Claude |
+| 36 | R4 | Monte Carlo, `spatialprobit` cross-checks, Wang and Kockelman subset, benchmarks (alongside 35) | 34 | Claude |
+| 37 | R4 | `vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change; R4 exit | 35, 36 | Claude |
+| 38 | R5 | Delete the C++ files; drop Rcpp and RcppEigen from DESCRIPTION and NAMESPACE; archive the `validation/rust_port/` results | 37 | Claude |
+| 39 | R5 | Update the documentation listed under R5 | 38 | Claude |
+| 40 | R5 | Push; GitHub Actions clean on the three OSes (R5 exit) | 39 | You, or Claude when asked |
+| 41 | R5 | Merge `rust` into `master` | 40 | You, or Claude when asked |
+| 42 | after R5 | R6 optimisations, one at a time, each gated by ESS per second, the reference tests and SBC | 41 | Claude |
+| 43 | after R5 | R7 extensions, as wanted | 41 | Claude, when asked |
+| 44 | after R5 | "Before the CRAN submission" list, once you decide to submit | 41; CLAUDE.md items 1-5 | Claude (vendoring, `cran-comments.md`); you (win-builder, mac-builder, rhub, the submission) |
 
 ### R0: Decisions, skeleton and platform proof (M)
 
+Steps 1-9.
+
 - [x] Maintainer answers R-D1, R-D7 and R-D8. *Decided 2026-10-30: savvy, Rust 1.84, Rust before the first CRAN submission.*
-- [ ] Branch `rust` from the current commit; tag that commit `cpp-final`; install it into `lib_cpp` (scratch library). Commits and tags are made by the maintainer, or on request.
-- [ ] Profile the C++ sampler (`valgrind --tool=callgrind` on `bench_models.R` cases) and record the per-block breakdown. Record the baseline benchmark file.
+- [ ] The first CI run on `master` (C++ version) passes, or its failures are fixed first.
+- [ ] Tag the passing commit `cpp-final`; branch `rust` from it; install it into `lib_cpp` (scratch library). Tags, commits and pushes are made by the maintainer, or by Claude on request.
+- [ ] Profile the C++ sampler (`valgrind --tool=callgrind` on `bench_models.R` cases) and record the per-block breakdown and the baseline benchmark file. This can run alongside the skeleton work.
 - [ ] Workspace skeleton: `pspcore`, `pspr`, `configure`/`configure.win`/`cleanup`, `Makevars.in`/`Makevars.win.in`, savvy wrappers, one exported function (e.g. `psp_rs_rng("unif", ...)`).
 - [ ] Measure the build options: `codegen-units` 1 vs 16 and `lto` off/thin/fat, against install time and the speed of a toy kernel. Record the installed size.
-- [ ] `tools/vendor.sh` with stubbing; confirm a source tarball ≤ 5 MB.
-- [ ] Find the rustc version on each CRAN check flavour (install logs of existing Rust packages on the CRAN check pages) and confirm ≥ 1.84 everywhere, or revisit R-D7.
-- [ ] Cross-platform proof: `R CMD check --as-cran` with the skeleton on Linux locally, and on GitHub Actions for macOS and Windows. **Needs the GitHub repository** (CLAUDE.md items 1 and 3). win-builder and mac-builder email the maintainer, so the maintainer starts them (item 5).
+- [ ] Rust in the GitHub workflows (§6.9).
+- [ ] Cross-platform proof: `R CMD check --as-cran` with the skeleton on Linux locally, and on GitHub Actions for macOS and Windows. The repository has existed since 2026-10-30 (`gueyenono/panelspatialprobit`).
 
-**Exit:** the skeleton package passes `R CMD check --as-cran` on Linux, macOS and Windows, with only NOTEs that are understood; it installs in under 3 min with `-j 2`; the tarball is ≤ 5 MB; decisions are recorded in this file.
+**Exit:** the skeleton package passes `R CMD check --as-cran` on Linux, macOS and Windows (GitHub Actions), with only NOTEs that are understood; it installs in under 3 min with `-j 2`; decisions are recorded in this file.
 
 ### R1: Foundations (M)
 
-- [ ] `rng`: MRG32k3a, inversion normal (AS241), `exp_rand`, `rgamma` (GD and GS), `rt`, `next_stream`, `next_substream`.
-- [ ] `dist`: truncnorm, R's `pnorm` (including log) and `dnorm`.
+Steps 10-14.
+
+- [ ] `rng`: MRG32k3a, inversion normal (AS241), `exp_rand`, `rgamma` (GD and GS), `rt`, `next_stream`, `next_substream`; `test-rng.R`.
+- [ ] `dist`: truncnorm, R's `pnorm` (including log) and `dnorm`. `psp_rs_rtnorm()` replaces `psp_rtnorm_cpp` in `test-truncnorm.R`.
 - [ ] `sparse`: `Csc`, `Weights`, conversion from `.psp_csc()`, mat-vec per period, merged patterns with value updates.
 - [ ] `par`: scoped worker pool, fixed chunking, cancel flag, progress counters. `pspr::run`: interrupt polling and progress printing.
-- [ ] `test-rng.R`, Rust unit tests, miri on `rng`/`dist`/`sparse`.
+- [ ] Rust unit tests alongside each module; miri on `rng`/`dist`/`sparse`.
 
 **Exit:** R's RNG streams reproduced (`expect_identical`, or ≤ 1 ulp where `libm` differs); `rtnorm` draws identical to `lib_cpp`; interrupting a dummy multi-thread job returns promptly on Linux.
 
 ### R2: Sampler (L)
 
+Steps 15-24. The first variant starts by switching `.psp_fit` to `psp_rs_sample()`:
+
+- remove `mcmapply`, and `.psp_with_stream()` around the sampler;
+- remove the `!parallel_run` restriction on `progress`;
+- variants not yet ported stop with a "not yet ported" error on the branch.
+
 Port in this order, each with its cross-build check (§6.7) before the next:
 
 1. binary SAR/SLX/none, pooled and RE (diagonal);
-2. ordered, with both cut-point samplers and the scale move;
+2. ordered, with both cut-point samplers and the scale move; `psp_rs_cut_kernel()` replaces `psp_cut_kernel_cpp` in `test-cutmove.R`;
 3. t errors;
 4. SDM (no sampler change; check the design path);
 5. SEM, SDEM and SARAR (lambda, sparse RE block);
@@ -505,27 +570,27 @@ Port in this order, each with its cross-build check (§6.7) before the next:
 7. time-varying weights;
 8. latent AR.
 
-- [ ] `.psp_fit` calls `psp_rs_sample()`; remove `.psp_with_stream()` around the sampler and `mcmapply`.
-- [ ] Remove the `!parallel_run` restriction on `progress`.
-- [ ] Replace `psp_rtnorm_cpp` and `psp_cut_kernel_cpp` in the tests with the Rust versions.
-
 **Exit:**
 
 - cross-build checks pass for every variant;
 - the full testthat suite passes with `NOT_CRAN=true`, including `test-reference.R`;
 - `bench_models.R` per-iteration time within ±10% of C++ (or faster) for SAR, ordered SAR and SEM;
-- the SBC smoke subset passes.
+- the SBC smoke subset passes;
+- the interrupt, progress and `mclapply` checks (§6.10 layer 6) pass.
 
 ### R3: Post-processing (L)
 
+Steps 25-34.
+
+- [ ] Decide how users set post-processing threads (maintainer). Recommended: `fit$control$cores`, overridable with `options(panelspatialprobit.threads = )`. Document in `?psp_control`.
 - [ ] Move the current R reduced form, impacts and predict code to `R/reference_postproc.R` (oracle).
-- [ ] `lndet` (sparse and eigen grid evaluation), `rf` (block, latent AR, mixture), `impacts`, `predict`, `ppc`, `response`, `ghk`; R callers switched over one at a time.
-- [ ] Decide how users set post-processing threads. Recommended: `fit$control$cores`, overridable with `options(panelspatialprobit.threads = )`. Document in `?psp_control`.
-- [ ] `test-postproc-oracle.R`, `test-threads.R`.
+- [ ] Port in this order, switching the R caller over at each step: `lndet` (sparse, and the eigen grid evaluation), `rf` (block, latent AR, mixture), then `impacts`, `predict`, `ppc`, `response` and `ghk`. Each port adds its cases to `test-postproc-oracle.R` and `test-threads.R` as it lands.
 
 **Exit:** oracle tests pass (1e-10); the existing impacts, loglik, PPC and response tests pass; the §6.2 post-processing targets are met.
 
 ### R4: Validation gate (M; mostly compute time)
+
+Steps 35-37.
 
 - [ ] Full SBC for every variant, with the same replication counts as the recorded runs, and a replication run (`SBC_SEED_OFFSET`) for any marginal result.
 - [ ] Monte Carlo, the `spatialprobit` cross-checks, the Wang and Kockelman subset (e.g. the rho = 0.6 and 0.9 cells), `bench_models.R`, `bench_large.R`, `bench_cutpoints.R`.
@@ -534,6 +599,8 @@ Port in this order, each with its cross-build check (§6.7) before the next:
 **Exit:** every documented variant passes SBC (CLAUDE.md model support gate), and the Monte Carlo coverage and bias stay within the ranges recorded in `05`.
 
 ### R5: Remove C++, documentation (S)
+
+Steps 38-41.
 
 - [ ] Delete `src/sampler.cpp`, `src/ghk.cpp`, `src/truncnorm.h`, `src/RcppExports.cpp` and `R/RcppExports.R`; update DESCRIPTION and NAMESPACE.
 - [ ] Archive `validation/rust_port/` results (keep the scripts, mark them historical).
@@ -545,13 +612,13 @@ Port in this order, each with its cross-build check (§6.7) before the next:
   - `paper/paper.md`: "C++" at about lines 30, 181, 700 and 870, the software versions at about line 1762, and the Rcpp/RcppEigen references;
   - `plan/02` §2.13 (parallelism), `plan/03` §3.3-3.4 and D3, `plan/05`;
   - CLAUDE.md (commands, architecture).
-- [ ] `cran-comments.md`: Rust, vendoring, installed size, any `compiled code` NOTE.
+- [ ] Merge `rust` into `master` once GitHub Actions is clean.
 
-**Exit:** `R CMD check --as-cran` on the three OSes gives only the expected NOTEs; the docs no longer mention the C++ engine.
+**Exit:** `R CMD check --as-cran` on the three OSes (GitHub Actions) gives only the expected NOTEs; the docs no longer mention the C++ engine.
 
 ### R6: Optimisations that Rust makes easy (M)
 
-Each item must show an ESS-per-second gain on the `02` §2.6 cases and pass the reference-sampler tests and SBC (CLAUDE.md "Mixing changes" convention). Read §2.6 "Mixing experiments" first.
+Step 42. Each item must show an ESS-per-second gain on the `02` §2.6 cases and pass the reference-sampler tests and SBC (CLAUDE.md "Mixing changes" convention). Read §2.6 "Mixing experiments" first.
 
 - [ ] **Period-parallel latent sweep.** Without latent AR, the z_t are conditionally independent given everything else, and each period's sweep touches only its own residual segment. Sweeping periods in parallel is therefore the same Markov kernel. With latent AR, z_t depends only on z_{t-1} and z_{t+1}: sweep all even periods in parallel, then all odd ones (chromatic Gibbs). Each period writes only r_t and r_{t+1}, so there are no races. Substream per (chain, period) (§6.6). New `psp_control(threads_per_chain = 1)`.
 - [ ] Specialise `latent_sweep` on (t errors, latent AR) with const generics.
@@ -563,17 +630,28 @@ Each item must show an ESS-per-second gain on the `02` §2.6 cases and pass the 
 
 ### R7: Optional extensions
 
+Step 43.
+
 - Chromatic (graph-coloured) sweep within a period for T = 1 or small T. Units j and k can be updated at the same time when `(A'A)_jk = 0`, which keeps the kernel exact.
 - Chebyshev or Barry-Pace Monte Carlo log-determinants for N beyond about 50,000 (`02` §2.9).
 - A GHK variant with inverse-CDF draws, whose estimate is continuous in the parameters under common random numbers (smoother DIC differences).
 - A faster RNG (R-D3 alternative), if profiling after R6 shows the RNG dominates the sweep.
 - `pspcore` as a standalone crate (e.g. for Python bindings later).
 
+### Before the CRAN submission (deferred, no date)
+
+Step 44. These matter only for CRAN, so they wait for the submission (R-D8). They need R5 (not R6 or R7) and the maintainer items 1-5 in CLAUDE.md.
+
+- [ ] `tools/vendor.sh` with stubbing (§6.9); an offline install from the resulting tarball; the source tarball ≤ 5 MB.
+- [ ] Find the rustc version on each CRAN check flavour (install logs of existing Rust packages on the CRAN check pages) and confirm ≥ 1.84 everywhere, or revisit R-D7.
+- [ ] win-builder (release and devel), mac-builder and rhub on the vendored tarball. They email the maintainer, so the maintainer starts them (CLAUDE.md item 5, after item 2).
+- [ ] `cran-comments.md`: Rust, vendoring, installed size, any `compiled code` NOTE.
+
 ## 6.12 Risks and mitigations
 
 | Risk | Likelihood | Mitigation |
 |---|---|---|
-| The first CRAN submission is reviewed together with the Rust build (R-D8) | Medium | Prove the build on CRAN-like platforms in R0 (GitHub Actions, then win-builder, mac-builder and rhub) before porting any real code; R5 exit needs clean checks on all three OSes; `cran-comments.md` explains the vendoring, the sizes and any NOTEs. |
+| The first CRAN submission is reviewed together with the Rust build (R-D8) | Medium | Prove the build on GitHub Actions for all three OSes in R0, before porting any real code; R5 exit needs clean checks there; the CRAN-only checks are in §6.11 "Before the CRAN submission". |
 | A CRAN flavour has rustc < 1.84 | Low-Medium | R0 checks flavour logs; `configure` fails with a clear message; fallback is R-D7's alternative. |
 | faer API changes (0.x) | High over time | Pin `=0.24.4`, commit `Cargo.lock`, upgrade deliberately with the full test and benchmark run. |
 | Vendored size grows past the 5 MB tarball guidance | Medium | Stub unreachable crates; keep faer features minimal; CRAN allows hosting the bundle elsewhere with a checksum (last resort). |
@@ -595,7 +673,8 @@ Each item must show an ESS-per-second gain on the `02` §2.6 cases and pass the 
 | `NAMESPACE` | Drop `importFrom(Rcpp, sourceCpp)`; keep `useDynLib(panelspatialprobit, .registration = TRUE)` | R5 |
 | `configure`, `configure.win`, `cleanup` | New. Git mode 100755: on the NTFS mount every file looks executable, so set it explicitly with `git update-index --chmod=+x` | R0 |
 | `src/Makevars.in`, `src/Makevars.win.in`, `src/init.c`, `src/rust/**` | New | R0+ |
-| `tools/vendor.sh`, `tools/rust_authors.R`, `inst/AUTHORS`, `inst/COPYRIGHTS` | New | R0, R1 |
+| `tools/rust_authors.R`, `inst/AUTHORS`, `inst/COPYRIGHTS` | New | R1 |
+| `tools/vendor.sh`, `cran-comments.md` | New | before the CRAN submission |
 | `.Rbuildignore` | Add `^src/rust/target$`, `^src/rust/vendor$`, `^src/\.cargo$`, `^src/Makevars$`, `^src/Makevars\.win$`, `^rust-dev$`, `^tools/vendor\.sh$`, `^cran-comments\.md$` | R0 |
 | `.gitignore` | Add `src/rust/target/`, `src/rust/vendor/`, `src/rust/vendor.tar.xz`, `src/.cargo/`, `src/Makevars`, `src/Makevars.win`, `src/*.a` | R0 |
 | `R/psprobit.R` | `.psp_fit` calls `psp_rs_sample()`; `mcmapply` and `.psp_with_stream()` for the sampler removed | R2 |
@@ -616,5 +695,6 @@ export PSP_CARGO_TARGET_DIR="$HOME/.cache/panelspatialprobit/target"   # keep ca
 (cd src/rust && cargo clippy --all-targets -- -D warnings && cargo fmt --check)
 savvy-cli update .                        # after changing #[savvy] functions (replaces Rcpp::compileAttributes)
 R CMD INSTALL --no-test-load -l <lib> .   # build + install (cargo runs from the Makevars)
-tools/vendor.sh && R CMD build . && R CMD check --as-cran --no-manual panelspatialprobit_*.tar.gz
+R CMD build . && R CMD check --as-cran --no-manual panelspatialprobit_*.tar.gz
+tools/vendor.sh                           # CRAN tarballs only: writes src/rust/vendor.tar.xz before R CMD build
 ```

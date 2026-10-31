@@ -87,31 +87,30 @@ Rscript validation/vignette_data.R                                 # refresh vig
 - **Model support gate.** New model variants must pass SBC (`validation/sbc/run_sbc.R`, add the variant) before they are documented as supported.
 - **Parameter names.** Draw columns are named: regressor names, `rho`, `lambda`, `sigma_alpha`, `cut[a|b]`. Impacts and prediction look parameters up by these names.
 
-## Still needed (as of 2026-10-29)
+## Still needed (as of 2026-10-30)
 
-Phases 1–6 and vignettes (7.1) are done; `R CMD check --as-cran` gives 1 NOTE (new submission). Nothing has been committed yet. The items below are open; details are in `plan/05_roadmap.md`.
+Phases 1–6 and vignettes (7.1) are done; `R CMD check --as-cran` gives 1 NOTE (new submission). The repository is on GitHub (`gueyenono/panelspatialprobit`, remote `origin`, branch `master`). The items below are open; details are in `plan/05_roadmap.md`.
 
 **Needs the maintainer (do not do these without being asked):**
 
-1. **Git setup** (Phase 0). Run `git config --global --add safe.directory <project path>` (do not change the global git config on the user's behalf). Then make the first commit, create the GitHub repository and add the remote. Commit or push only when asked.
+1. **Git setup** (Phase 0). Done 2026-10-30: `safe.directory` is set, and the repository is on GitHub with remote `origin`. Do not change the global git config on the user's behalf. Commit or push only when asked.
 2. **Author details** (Phase 0, 7.3). Replace the placeholder `person("Package", "Author", ...)` in `DESCRIPTION` (`Authors@R`; add an ORCID if wanted) and in `inst/CITATION` (both `author` and `textVersion`). Once the paper exists, add it to `inst/CITATION`.
-3. **Repository URLs** (7.3). After the GitHub repository exists:
-   - set `url:` in `_pkgdown.yml` (now a commented placeholder);
-   - add `URL:` and `BugReports:` to `DESCRIPTION`;
-   - check that the three workflows in `.github/workflows/` (R-CMD-check, test-coverage, pkgdown) pass. They have never run.
+3. **Repository URLs** (7.3). Done 2026-10-30: `url:` in `_pkgdown.yml` and `URL:`/`BugReports:` in `DESCRIPTION` point to `gueyenono/panelspatialprobit` and its GitHub Pages site. Still open:
+   - check that the three workflows in `.github/workflows/` (R-CMD-check, test-coverage, pkgdown) pass. On their first run (commit `05391bb`) R-CMD-check and test-coverage passed; pkgdown failed on `psp_t` missing from the reference index, since fixed;
+   - turn on GitHub Pages for the `gh-pages` branch (repository settings), so the site URL resolves.
 4. **Empirical example data** (7.2). Choose the dataset(s) from `plan/04` §4.6:
    - binary: the Elhorst et al. (2017) inflation-targeting panel, CC-BY 4.0;
    - ordered: US Drought Monitor, after checking its redistribution terms.
 
    Build them in `data/` from scripts in `data-raw/`, with the licence noted, and document them. Then use them in the vignettes, which so far rely on simulated data only.
-5. **Platform checks** (7.4). Run the `rhub` and win-builder checks. They email the maintainer, so the user must start them, and only after item 2.
+5. **Platform checks** (7.4). Run the `rhub` and win-builder checks. They email the maintainer, so the user must start them, and only after item 2. Deferred with item 8; they run on the Rust build.
 6. **Paper** (7.5). A draft is in `paper/paper.md`: the abstract, outline and full text of Sections 1–6, 8 and 9 (all but the Section 7 application, which needs item 4). Choose the venue, then convert it to that venue's format. Section 7 needs writing, the abstract and conclusion each have a placeholder sentence for it, and the `[TODO]` marks need checking. The paper is for the R Journal or JSS, covering:
    - the models;
    - the `Az - b` engine and the cut-point move;
    - SBC and Monte Carlo evidence, as summarised in `vignette("validation")`;
    - an empirical application, which needs item 4.
 7. **Reference papers** (Phase 0). Obtain the paywalled papers in the "Reading to obtain" table of `plan/05_roadmap.md`. Then check the model specifications against the published versions, especially Baltagi, Egger & Kesina (2018) and Wang & Kockelman (2009). The Wang & Kockelman replication (`validation/wang_kockelman/`) follows the 2008 TRB working-paper version in `literature/`; check its design and Table 1 against the published paper.
-8. **CRAN submission.** Submit after items 1–5 and the Rust migration (`plan/06_rust_integration.md`, phases R0–R5): the first CRAN release is the Rust version (decision R-D8, 2026-10-30), and the item 5 checks run on that build.
+8. **CRAN submission.** Deferred by the maintainer (2026-10-30), with no date. When it happens, it comes after items 1–5 and the Rust migration (`plan/06_rust_integration.md`: phases R0–R5, then its "Before the CRAN submission" list). The first CRAN release is the Rust version (decision R-D8).
 
 **Optional work that Claude can do on request:**
 

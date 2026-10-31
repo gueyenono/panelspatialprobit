@@ -4,7 +4,7 @@ The work is split into phases, each with concrete tasks and an **exit criterion*
 
 ## Phase 0: Project setup (S)
 
-- [~] `git init`; create the GitHub repository (decision D5: local working copy outside Google Drive). *Status: repo initialised; it needs `git config --global --add safe.directory <path>` (NTFS mount, root-owned files). No remote yet.*
+- [x] `git init`; create the GitHub repository (decision D5: local working copy outside Google Drive). *Status: on GitHub as `gueyenono/panelspatialprobit` (remote `origin`) since 2026-10-30. The working copy is still on the Google Drive mount.*
 - [~] `usethis::create_package()` in place. *Status: written by hand; the author in `Authors@R` is still a placeholder.* Set DESCRIPTION:
   - Title: "Bayesian Panel Spatial Probit and Ordered Probit Models";
   - `Authors@R` with ORCID;
@@ -12,7 +12,7 @@ The work is split into phases, each with concrete tasks and an **exit criterion*
 - [~] `use_roxygen_md()`, `use_testthat(3)`, `use_rcpp_eigen()` (or `use_rcpp()` + LinkingTo), `use_news_md()`, `use_readme_rmd()`, `use_pkgdown()`. *Status: roxygen markdown, testthat 3, RcppEigen, NEWS and vignettes are set up by hand; README is plain Markdown; no pkgdown yet.*
 - [x] Add a "hello sparse" C++ function: maps a `dgCMatrix` and returns `W %*% x`, to prove the toolchain works. *Status: superseded by the sampler itself, which maps `dgCMatrix` weights.*
 - [x] `.Rbuildignore` / `.gitignore` as in `03` §3.5.
-- [~] GitHub Actions: `R-CMD-check` (3 OS × 3 R versions), `test-coverage`, `pkgdown`. *Status: all three workflows are written under `.github/workflows/` (untested until there is a GitHub remote).*
+- [~] GitHub Actions: `R-CMD-check` (3 OS × 3 R versions), `test-coverage`, `pkgdown`. *Status: all three workflows are written under `.github/workflows/`; they first ran on 2026-10-30 (commit `05391bb`).*
 - [x] Re-run `/init` to generate CLAUDE.md. It should cover build/test commands, the stacking convention, the $Az - b$ abstraction and the SBC gate.
 - [ ] Obtain the paywalled papers listed in "Reading to obtain" below.
 
@@ -112,7 +112,7 @@ The work is split into phases, each with concrete tasks and an **exit criterion*
   - dynamics;
   - "How we validated the samplers" (an SBC summary with figures generated from `validation/`).
 - [ ] 7.2 Empirical example data in `data/`, built from `data-raw/` scripts with licences noted (`04` §4.6). *Open: needs the choice of a real dataset whose licence allows redistribution.*
-- [~] 7.3 pkgdown site and `inst/CITATION`. *Status: `_pkgdown.yml` (reference index grouped by task) and `inst/CITATION` are written; the site URL and the citation author wait for the repository and the author details.*
+- [~] 7.3 pkgdown site and `inst/CITATION`. *Status: `_pkgdown.yml` (reference index grouped by task) and `inst/CITATION` are written; the site URL (`https://gueyenono.github.io/panelspatialprobit/`) and `URL`/`BugReports` in `DESCRIPTION` were set on 2026-10-30; the citation author waits for the author details.*
 - [~] 7.4 CRAN readiness:
   - examples run in under 5 s each (`\donttest{}` for longer ones);
   - total check time under 10 min;
