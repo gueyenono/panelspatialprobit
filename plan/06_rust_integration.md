@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R4 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R5 under way (C++ removed, docs updated; GitHub Actions and the merge into `master` pending). Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R5 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; the branch `rust` was merged into `master` after R5); R6, R7 and the CRAN list remain. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -530,8 +530,8 @@ One step per row, in the order to do them.
 | 37 | R4 | `vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change; R4 exit *Done 2026-10-31: R4 exit met.* | 35, 36 | Claude |
 | 38 | R5 | Delete the C++ files; drop Rcpp and RcppEigen from DESCRIPTION and NAMESPACE; archive the `validation/rust_port/` results *Done 2026-10-31 (`validation/rust_port/README.md` marks `compare_sampler.R` historical).* | 37 | Claude |
 | 39 | R5 | Update the documentation listed under R5 *Done 2026-10-31.* | 38 | Claude |
-| 40 | R5 | Push; GitHub Actions clean on the three OSes (R5 exit) | 39 | You, or Claude when asked |
-| 41 | R5 | Merge `rust` into `master` | 40 | You, or Claude when asked |
+| 40 | R5 | Push; GitHub Actions clean on the three OSes (R5 exit) *Done 2026-10-31 (commit `b81e1c1`).* | 39 | You, or Claude when asked |
+| 41 | R5 | Merge `rust` into `master` *Done 2026-10-31.* | 40 | You, or Claude when asked |
 | 42 | after R5 | R6 optimisations, one at a time, each gated by ESS per second, the reference tests and SBC | 41 | Claude |
 | 43 | after R5 | R7 extensions, as wanted | 41 | Claude, when asked |
 | 44 | after R5 | "Before the CRAN submission" list, once you decide to submit | 41; CLAUDE.md items 1-5 | Claude (vendoring, `cran-comments.md`); you (win-builder, mac-builder, rhub, the submission) |
@@ -669,7 +669,7 @@ Steps 38-41.
   - `paper/paper.md`: "C++" at about lines 30, 181, 700 and 870, the software versions at about line 1762, and the Rcpp/RcppEigen references;
   - `plan/02` §2.13 (parallelism), `plan/03` §3.3-3.4 and D3, `plan/05`;
   - CLAUDE.md (commands, architecture).
-- [ ] Merge `rust` into `master` once GitHub Actions is clean.
+- [x] Merge `rust` into `master` once GitHub Actions is clean. *Done 2026-10-31.*
 
 **Exit:** `R CMD check --as-cran` on the three OSes (GitHub Actions) gives only the expected NOTEs; the docs no longer mention the C++ engine.
 
