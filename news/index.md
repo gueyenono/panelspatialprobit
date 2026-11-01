@@ -119,6 +119,15 @@
   - Chains run in parallel threads on every operating system, Windows
     included (`psp_control(cores = )`); the draws do not depend on
     `cores`.
+  - New `psp_control(threads_per_chain = )`: the sweep over the latent
+    variables updates the periods of a chain in parallel, each period
+    with its own random number substream, so the draws do not depend on
+    it either. With 4 threads, a binary SAR fit with N = 10,000 and T =
+    20 runs 3 times as fast as with the C++ engine.
+  - The sampler is faster on one core: per iteration, 1.3 to 1.5 times
+    faster than the C++ engine at N = 1,000 and 1.4 to 2 times at N =
+    10,000 (SEM models gain most, from a supernodal Cholesky factor of
+    the random-effects precision).
   - [`psp_impacts()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_impacts.md),
     [`predict()`](https://rdrr.io/r/stats/predict.html),
     [`psp_ppc()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_ppc.md),
@@ -133,12 +142,11 @@
     their results do not depend on the plan.
   - The sampler always uses inversion normals, whatever
     `RNGkind(normal.kind = )` says.
-  - For the same seed,
+  - For the same seed, fits,
     [`psp_ppc()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_ppc.md),
     [`psp_response_path()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_response_path.md)
     and
     [`psp_loglik()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)
-    give different (still reproducible) numbers, as they now draw from
-    package streams rather than R’s generator. Models with SEM, SDEM or
-    SARAR random effects, or spatial random effects, give different
-    draws; the others give the same draws as before.
+    give different (still reproducible) numbers: the latent sweep draws
+    from one substream per period, and the post-processing from package
+    streams rather than R’s generator.

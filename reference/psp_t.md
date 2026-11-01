@@ -59,5 +59,5 @@ fit <- psprobit(y ~ x1 + x2, d, c("id", "time"), W, errors = psp_t(df = 5),
 #> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 100) for: (Intercept), x1, x2, rho, sigma_alpha. Consider more iterations.
 coef(fit)
 #> (Intercept)          x1          x2         rho sigma_alpha 
-#>   0.1290682   1.3537639  -1.1033764   0.3442226   1.5044671 
+#>   0.2501214   1.0784319  -0.7394814   0.3566867   1.1440320 
 ```

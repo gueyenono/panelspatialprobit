@@ -94,14 +94,14 @@ psp_impacts(fit, draws = 50)
 #> Impacts on P(y = 1) (posterior mean, sd, 95% interval; 50 draws)
 #> 
 #> direct:
-#>      mean     sd  q2.5  q97.5
-#> x1 0.1517 0.0314 0.107 0.2208
+#>      mean     sd   q2.5  q97.5
+#> x1 0.1669 0.0405 0.0967 0.2361
 #> 
 #> indirect:
-#>       mean     sd    q2.5  q97.5
-#> x1 -0.0022 0.0309 -0.0344 0.0815
+#>      mean     sd    q2.5 q97.5
+#> x1 0.0348 0.0591 -0.0267 0.174
 #> 
 #> total:
 #>      mean     sd   q2.5  q97.5
-#> x1 0.1496 0.0474 0.0914 0.2843
+#> x1 0.2017 0.0886 0.0727 0.3776
 ```

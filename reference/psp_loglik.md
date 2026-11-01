@@ -108,21 +108,20 @@ fit <- psprobit(y ~ x1, data = d, index = c("id", "time"), W = W, impacts = FALS
                 control = psp_control(iter = 200, warmup = 100, chains = 1, seed = 2))
 #> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 100) for: (Intercept), x1, rho, sigma_alpha. Consider more iterations.
 logLik(fit, reps = 200)
-#> Warning: The GHK estimates are unreliable (Monte Carlo se up to 0.94 on the log scale): increase 'reps'. GHK needs many replications for large N x T.
-#> 'log Lik.' -36.6207 (df=4)
+#> 'log Lik.' -35.86657 (df=4)
 psp_dic(fit, draws = 20, reps = 100)
 #> Warning: The GHK estimates are unreliable (Monte Carlo se up to 1.00 on the log scale): increase 'reps'. GHK needs many replications for large N x T.
 #> Warning: Negative p_D: the GHK error dominates; increase 'reps'.
 #> $dic
-#> [1] 53.78186
+#> [1] 61.75925
 #> 
 #> $p_d
-#> [1] -18.66173
+#> [1] -4.844922
 #> 
 #> $d_bar
-#> [1] 72.44359
+#> [1] 66.60417
 #> 
 #> $d_hat
-#> [1] 91.10532
+#> [1] 71.44909
 #> 
 ```

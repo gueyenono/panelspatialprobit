@@ -91,7 +91,7 @@ fit <- psprobit(y ~ x1 + x2, d, c("id", "time"), W, dynamic = psp_dynamic(),
 #> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 100) for: (Intercept), x1, x2, lag_y, init_y, mean_x1, mean_x2, rho, sigma_alpha. Consider more iterations.
 coef(fit)
 #> (Intercept)          x1          x2       lag_y      init_y     mean_x1 
-#>  -0.7604611   1.3051023  -1.3946623   2.0093651  -0.2378243   1.2928919 
+#>  -0.8280242   1.3557468  -1.6341862   1.9007703   0.3654488   1.4835307 
 #>     mean_x2         rho sigma_alpha 
-#>   1.5797796   0.1889955   1.3583197 
+#>   1.0649738   0.1102372   1.9517472 
 ```

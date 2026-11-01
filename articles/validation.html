@@ -140,12 +140,12 @@ cut-points
 500 replications per variant, two chains, 400 thinned posterior draws
 per fit. Uniformity of each parameter’s ranks is tested by a chi-square
 test on 10 bins.</p>
-<p>In all, 47 runs of 30 variants were made, with 298 rank tests. Under
+<p>In all, 50 runs of 30 variants were made, with 316 rank tests. Under
 correct calibration the p-values of these tests are themselves uniform:
 about 5% should fall below 0.05 and 1% below 0.01 by chance alone.</p>
 <p><img src="validation_files/figure-html/unnamed-chunk-2-1.png" class="r-plt" alt="Histogram and uniform quantile plot of SBC p-values" width="672"></p>
-<p>The p-values are close to uniform. Of the 298 tests, 21 fall below
-0.05 and 1 below 0.01:</p>
+<p>The p-values are close to uniform. Of the 316 tests, 16 fall below
+0.05 and 3 below 0.01:</p>
 <table class="table">
 <thead><tr class="header">
 <th align="left">variant</th>
@@ -154,21 +154,40 @@ about 5% should fall below 0.05 and 1% below 0.01 by chance alone.</p>
 <th align="right">p</th>
 <th align="right">median max R-hat</th>
 </tr></thead>
-<tbody><tr class="odd">
+<tbody>
+<tr class="odd">
+<td align="left">sar_lat_re_bin</td>
+<td align="right">0</td>
+<td align="left">(Intercept)</td>
+<td align="right">0.00839</td>
+<td align="right">1.0180</td>
+</tr>
+<tr class="even">
 <td align="left">sar_lat_re_bin</td>
 <td align="right">0</td>
 <td align="left">lag_z</td>
-<td align="right">0.000793</td>
-<td align="right">1.0155</td>
-</tr></tbody>
+<td align="right">0.00181</td>
+<td align="right">1.0180</td>
+</tr>
+<tr class="odd">
+<td align="left">sarar_tv_re_ord3</td>
+<td align="right">0</td>
+<td align="left">lambda</td>
+<td align="right">0.00513</td>
+<td align="right">1.0103</td>
+</tr>
+</tbody>
 </table>
-<p>It comes from the latent AR model with SAR at the default chain
-length (red in the right panel). There the ranks of the latent AR
-coefficient are U-shaped, and the failures concentrate in the
+<p>Two come from the latent AR model with SAR at the default chain
+length (red in the right panel), and the third,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>λ</mi><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>
+in the SARAR model with time-varying weights, passes in a replication
+with other seeds (p = 0.464). In the latent AR model the ranks of the
+latent AR coefficient are U-shaped, and the failures concentrate in the
 replications whose chains had not converged (max
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mi>R</mi><mo accent="true">̂</mo></mover><mo>≥</mo><mn>1.02</mn></mrow><annotation encoding="application/x-tex">\hat R \geq 1.02</annotation></semantics></math>):
 the sampler mixes slowly, rather than targeting the wrong distribution.
-A replication with other seeds passes (p = 0.08), and so does the same
+A replication with other seeds passes (p = 0.074), and so does the same
 variant with chains three times as long:</p>
 <p><img src="validation_files/figure-html/unnamed-chunk-4-1.png" class="r-plt" alt="Rank histograms of the latent AR coefficient at two chain lengths" width="672"></p>
 <p>SARAR models with
@@ -205,15 +224,15 @@ the median over replications of the largest
 <td align="left">none_re_bin</td>
 <td align="right">0</td>
 <td align="right">4</td>
-<td align="right">0.270</td>
+<td align="right">0.164</td>
 <td align="right">1.006</td>
 </tr>
 <tr class="even">
 <td align="left">sar_chamberlain_bin</td>
 <td align="right">0</td>
 <td align="right">9</td>
-<td align="right">0.019</td>
-<td align="right">1.011</td>
+<td align="right">0.056</td>
+<td align="right">1.010</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_chamberlain_bin</td>
@@ -226,7 +245,7 @@ the median over replications of the largest
 <td align="left">sar_dyn_bin</td>
 <td align="right">0</td>
 <td align="right">9</td>
-<td align="right">0.032</td>
+<td align="right">0.056</td>
 <td align="right">1.010</td>
 </tr>
 <tr class="odd">
@@ -240,98 +259,112 @@ the median over replications of the largest
 <td align="left">sar_lat_re_bin</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.001</td>
-<td align="right">1.016</td>
+<td align="right">0.002</td>
+<td align="right">1.018</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_lat_re_bin</td>
 <td align="right">1</td>
 <td align="right">6</td>
-<td align="right">0.068</td>
+<td align="right">0.074</td>
 <td align="right">1.017</td>
 </tr>
 <tr class="even">
 <td align="left">sar_lat_re_bin_long</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.078</td>
-<td align="right">1.013</td>
+<td align="right">0.144</td>
+<td align="right">1.012</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_mundlak_bin</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.053</td>
+<td align="right">0.058</td>
 <td align="right">1.008</td>
 </tr>
 <tr class="even">
 <td align="left">sar_pool_bin</td>
 <td align="right">0</td>
 <td align="right">4</td>
-<td align="right">0.079</td>
-<td align="right">1.006</td>
+<td align="right">0.124</td>
+<td align="right">1.007</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_re_bin</td>
 <td align="right">0</td>
 <td align="right">5</td>
-<td align="right">0.276</td>
+<td align="right">0.025</td>
 <td align="right">1.007</td>
 </tr>
 <tr class="even">
+<td align="left">sar_re_bin</td>
+<td align="right">1</td>
+<td align="right">5</td>
+<td align="right">0.423</td>
+<td align="right">1.007</td>
+</tr>
+<tr class="odd">
 <td align="left">sar_re_bin_missing</td>
 <td align="right">0</td>
 <td align="right">5</td>
-<td align="right">0.011</td>
+<td align="right">0.087</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sar_re_bin_missing</td>
 <td align="right">1</td>
 <td align="right">5</td>
 <td align="right">0.127</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sar_re_ord3</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.036</td>
+<td align="right">0.048</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sar_re_ord3</td>
 <td align="right">1</td>
 <td align="right">6</td>
-<td align="right">0.239</td>
+<td align="right">0.013</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sar_re_ord3_missing</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.188</td>
+<td align="right">0.104</td>
 <td align="right">1.009</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sar_re_ord4</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.106</td>
+<td align="right">0.015</td>
+<td align="right">1.008</td>
+</tr>
+<tr class="odd">
+<td align="left">sar_re_ord4</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">0.022</td>
 <td align="right">1.009</td>
 </tr>
 <tr class="even">
 <td align="left">sar_re_ord4_ac</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.106</td>
-<td align="right">1.009</td>
+<td align="right">0.098</td>
+<td align="right">1.010</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_sre_bin</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.047</td>
+<td align="right">0.059</td>
 <td align="right">1.009</td>
 </tr>
 <tr class="even">
@@ -345,185 +378,192 @@ the median over replications of the largest
 <td align="left">sar_t_re_bin</td>
 <td align="right">0</td>
 <td align="right">5</td>
-<td align="right">0.013</td>
+<td align="right">0.039</td>
 <td align="right">1.008</td>
 </tr>
 <tr class="even">
 <td align="left">sar_t_re_bin</td>
 <td align="right">1</td>
 <td align="right">5</td>
-<td align="right">0.048</td>
-<td align="right">1.008</td>
+<td align="right">0.018</td>
+<td align="right">1.007</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_tv_re_bin</td>
 <td align="right">0</td>
 <td align="right">5</td>
-<td align="right">0.058</td>
-<td align="right">1.008</td>
+<td align="right">0.060</td>
+<td align="right">1.007</td>
 </tr>
 <tr class="even">
 <td align="left">sarar_re_bin</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.200</td>
+<td align="right">0.047</td>
 <td align="right">1.009</td>
 </tr>
 <tr class="odd">
-<td align="left">sarar_re_ord3</td>
-<td align="right">0</td>
-<td align="right">7</td>
-<td align="right">0.016</td>
-<td align="right">1.009</td>
+<td align="left">sarar_re_bin</td>
+<td align="right">1</td>
+<td align="right">6</td>
+<td align="right">0.161</td>
+<td align="right">1.008</td>
 </tr>
 <tr class="even">
 <td align="left">sarar_re_ord3</td>
-<td align="right">1</td>
-<td align="right">7</td>
-<td align="right">0.012</td>
-<td align="right">1.009</td>
-</tr>
-<tr class="odd">
-<td align="left">sarar_t_re_ord3</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.011</td>
+<td align="right">0.040</td>
+<td align="right">1.010</td>
+</tr>
+<tr class="odd">
+<td align="left">sarar_re_ord3</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">0.110</td>
 <td align="right">1.010</td>
 </tr>
 <tr class="even">
 <td align="left">sarar_t_re_ord3</td>
-<td align="right">1</td>
+<td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.137</td>
+<td align="right">0.021</td>
 <td align="right">1.010</td>
 </tr>
 <tr class="odd">
+<td align="left">sarar_t_re_ord3</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">0.025</td>
+<td align="right">1.010</td>
+</tr>
+<tr class="even">
 <td align="left">sarar_t_re_ord3</td>
 <td align="right">2</td>
 <td align="right">7</td>
 <td align="right">0.055</td>
 <td align="right">1.010</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sarar_t_re_ord3_long</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.027</td>
+<td align="right">0.131</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sarar_t_re_ord3_long</td>
 <td align="right">1</td>
 <td align="right">7</td>
 <td align="right">0.209</td>
 <td align="right">1.009</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sarar_tv_re_ord3</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.034</td>
-<td align="right">1.009</td>
-</tr>
-<tr class="odd">
-<td align="left">sarar_tv_re_ord3</td>
-<td align="right">1</td>
-<td align="right">7</td>
-<td align="right">0.113</td>
+<td align="right">0.005</td>
 <td align="right">1.010</td>
 </tr>
 <tr class="even">
+<td align="left">sarar_tv_re_ord3</td>
+<td align="right">1</td>
+<td align="right">7</td>
+<td align="right">0.060</td>
+<td align="right">1.010</td>
+</tr>
+<tr class="odd">
 <td align="left">sdem_re_bin</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.022</td>
+<td align="right">0.121</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sdem_re_bin</td>
 <td align="right">1</td>
 <td align="right">7</td>
 <td align="right">0.230</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sdm_re_bin</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.284</td>
+<td align="right">0.174</td>
 <td align="right">1.009</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sem_lat_re_ord3</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.097</td>
+<td align="right">0.114</td>
 <td align="right">1.012</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sem_lat_re_ord3</td>
 <td align="right">1</td>
 <td align="right">7</td>
 <td align="right">0.079</td>
 <td align="right">1.012</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sem_pool_bin</td>
 <td align="right">0</td>
 <td align="right">4</td>
-<td align="right">0.188</td>
+<td align="right">0.063</td>
 <td align="right">1.006</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sem_re_bin</td>
 <td align="right">0</td>
 <td align="right">5</td>
-<td align="right">0.031</td>
-<td align="right">1.008</td>
+<td align="right">0.115</td>
+<td align="right">1.007</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sem_re_bin</td>
 <td align="right">1</td>
 <td align="right">5</td>
 <td align="right">0.209</td>
 <td align="right">1.007</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sem_re_ord3</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.142</td>
+<td align="right">0.220</td>
 <td align="right">1.008</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sem_sre_ord3</td>
 <td align="right">0</td>
 <td align="right">7</td>
-<td align="right">0.035</td>
-<td align="right">1.010</td>
+<td align="right">0.273</td>
+<td align="right">1.009</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left">sem_sre_ord3</td>
 <td align="right">1</td>
 <td align="right">7</td>
 <td align="right">0.122</td>
 <td align="right">1.009</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left">sem_t_re_ord3</td>
 <td align="right">0</td>
 <td align="right">6</td>
-<td align="right">0.331</td>
-<td align="right">1.008</td>
-</tr>
-<tr class="even">
-<td align="left">slx_re_bin</td>
-<td align="right">0</td>
-<td align="right">6</td>
-<td align="right">0.026</td>
+<td align="right">0.423</td>
 <td align="right">1.008</td>
 </tr>
 <tr class="odd">
+<td align="left">slx_re_bin</td>
+<td align="right">0</td>
+<td align="right">6</td>
+<td align="right">0.075</td>
+<td align="right">1.008</td>
+</tr>
+<tr class="even">
 <td align="left">slx_re_bin</td>
 <td align="right">1</td>
 <td align="right">6</td>
@@ -607,9 +647,9 @@ or 400 units.</p>
 <td align="left">x1</td>
 <td align="right">1.000</td>
 <td align="right">0.012</td>
-<td align="right">0.079</td>
-<td align="right">0.895</td>
-<td align="right">0.257</td>
+<td align="right">0.080</td>
+<td align="right">0.905</td>
+<td align="right">0.256</td>
 </tr>
 <tr class="even">
 <td align="left">sar_bin_N100</td>
@@ -618,24 +658,24 @@ or 400 units.</p>
 <td align="right">-0.012</td>
 <td align="right">0.076</td>
 <td align="right">0.915</td>
-<td align="right">0.257</td>
+<td align="right">0.256</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_bin_N100</td>
 <td align="left">rho</td>
 <td align="right">0.500</td>
 <td align="right">-0.005</td>
-<td align="right">0.046</td>
-<td align="right">0.900</td>
-<td align="right">0.143</td>
+<td align="right">0.047</td>
+<td align="right">0.890</td>
+<td align="right">0.142</td>
 </tr>
 <tr class="even">
 <td align="left">sar_bin_N100</td>
 <td align="left">sigma_alpha</td>
 <td align="right">0.700</td>
 <td align="right">0.015</td>
-<td align="right">0.095</td>
-<td align="right">0.910</td>
+<td align="right">0.096</td>
+<td align="right">0.905</td>
 <td align="right">0.321</td>
 </tr>
 <tr class="odd">
@@ -644,8 +684,8 @@ or 400 units.</p>
 <td align="right">0.377</td>
 <td align="right">-0.003</td>
 <td align="right">0.028</td>
-<td align="right">0.910</td>
-<td align="right">0.096</td>
+<td align="right">0.885</td>
+<td align="right">0.095</td>
 </tr>
 <tr class="even">
 <td align="left">sar_bin_N400</td>
@@ -653,7 +693,7 @@ or 400 units.</p>
 <td align="right">1.000</td>
 <td align="right">0.004</td>
 <td align="right">0.037</td>
-<td align="right">0.915</td>
+<td align="right">0.910</td>
 <td align="right">0.126</td>
 </tr>
 <tr class="odd">
@@ -661,9 +701,9 @@ or 400 units.</p>
 <td align="left">x2</td>
 <td align="right">-1.000</td>
 <td align="right">-0.005</td>
-<td align="right">0.039</td>
-<td align="right">0.905</td>
-<td align="right">0.126</td>
+<td align="right">0.038</td>
+<td align="right">0.910</td>
+<td align="right">0.127</td>
 </tr>
 <tr class="even">
 <td align="left">sar_bin_N400</td>
@@ -671,16 +711,16 @@ or 400 units.</p>
 <td align="right">0.500</td>
 <td align="right">-0.004</td>
 <td align="right">0.022</td>
-<td align="right">0.910</td>
+<td align="right">0.915</td>
 <td align="right">0.074</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_bin_N400</td>
 <td align="left">sigma_alpha</td>
 <td align="right">0.700</td>
-<td align="right">0.002</td>
+<td align="right">0.003</td>
 <td align="right">0.048</td>
-<td align="right">0.900</td>
+<td align="right">0.910</td>
 <td align="right">0.156</td>
 </tr>
 <tr class="even">
@@ -689,8 +729,8 @@ or 400 units.</p>
 <td align="right">0.380</td>
 <td align="right">-0.002</td>
 <td align="right">0.015</td>
-<td align="right">0.880</td>
-<td align="right">0.049</td>
+<td align="right">0.900</td>
+<td align="right">0.050</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_ord4_N100</td>
@@ -707,7 +747,7 @@ or 400 units.</p>
 <td align="right">-1.000</td>
 <td align="right">-0.010</td>
 <td align="right">0.062</td>
-<td align="right">0.885</td>
+<td align="right">0.880</td>
 <td align="right">0.195</td>
 </tr>
 <tr class="odd">
@@ -716,7 +756,7 @@ or 400 units.</p>
 <td align="right">0.500</td>
 <td align="right">-0.003</td>
 <td align="right">0.034</td>
-<td align="right">0.890</td>
+<td align="right">0.895</td>
 <td align="right">0.113</td>
 </tr>
 <tr class="even">
@@ -725,8 +765,8 @@ or 400 units.</p>
 <td align="right">0.700</td>
 <td align="right">0.012</td>
 <td align="right">0.079</td>
-<td align="right">0.900</td>
-<td align="right">0.262</td>
+<td align="right">0.910</td>
+<td align="right">0.263</td>
 </tr>
 <tr class="odd">
 <td align="left">sar_ord4_N100</td>
@@ -735,7 +775,7 @@ or 400 units.</p>
 <td align="right">0.011</td>
 <td align="right">0.060</td>
 <td align="right">0.910</td>
-<td align="right">0.203</td>
+<td align="right">0.202</td>
 </tr>
 <tr class="even">
 <td align="left">sar_ord4_N100</td>
@@ -743,7 +783,7 @@ or 400 units.</p>
 <td align="right">1.600</td>
 <td align="right">0.017</td>
 <td align="right">0.091</td>
-<td align="right">0.885</td>
+<td align="right">0.900</td>
 <td align="right">0.285</td>
 </tr>
 <tr class="odd">
@@ -752,8 +792,8 @@ or 400 units.</p>
 <td align="right">0.283</td>
 <td align="right">-0.001</td>
 <td align="right">0.025</td>
-<td align="right">0.880</td>
-<td align="right">0.081</td>
+<td align="right">0.875</td>
+<td align="right">0.082</td>
 </tr>
 <tr class="even">
 <td align="left">dyn_wooldridge</td>
@@ -761,17 +801,17 @@ or 400 units.</p>
 <td align="right">1.000</td>
 <td align="right">0.040</td>
 <td align="right">0.089</td>
-<td align="right">0.885</td>
-<td align="right">0.274</td>
+<td align="right">0.890</td>
+<td align="right">0.273</td>
 </tr>
 <tr class="odd">
 <td align="left">dyn_wooldridge</td>
 <td align="left">x2</td>
 <td align="right">-1.000</td>
-<td align="right">-0.036</td>
+<td align="right">-0.035</td>
 <td align="right">0.091</td>
-<td align="right">0.865</td>
-<td align="right">0.273</td>
+<td align="right">0.875</td>
+<td align="right">0.274</td>
 </tr>
 <tr class="even">
 <td align="left">dyn_wooldridge</td>
@@ -779,16 +819,16 @@ or 400 units.</p>
 <td align="right">0.400</td>
 <td align="right">-0.012</td>
 <td align="right">0.053</td>
-<td align="right">0.890</td>
-<td align="right">0.162</td>
+<td align="right">0.900</td>
+<td align="right">0.161</td>
 </tr>
 <tr class="odd">
 <td align="left">dyn_wooldridge</td>
 <td align="left">lag_y</td>
 <td align="right">0.800</td>
-<td align="right">0.009</td>
+<td align="right">0.010</td>
 <td align="right">0.118</td>
-<td align="right">0.920</td>
+<td align="right">0.925</td>
 <td align="right">0.416</td>
 </tr>
 <tr class="even">
@@ -798,7 +838,7 @@ or 400 units.</p>
 <td align="right">-0.176</td>
 <td align="right">0.187</td>
 <td align="right">0.140</td>
-<td align="right">0.204</td>
+<td align="right">0.205</td>
 </tr>
 <tr class="odd">
 <td align="left">dyn_pooled</td>
@@ -806,16 +846,16 @@ or 400 units.</p>
 <td align="right">-1.000</td>
 <td align="right">0.180</td>
 <td align="right">0.193</td>
-<td align="right">0.155</td>
+<td align="right">0.160</td>
 <td align="right">0.204</td>
 </tr>
 <tr class="even">
 <td align="left">dyn_pooled</td>
 <td align="left">rho</td>
 <td align="right">0.400</td>
-<td align="right">-0.025</td>
+<td align="right">-0.024</td>
 <td align="right">0.058</td>
-<td align="right">0.840</td>
+<td align="right">0.850</td>
 <td align="right">0.160</td>
 </tr>
 <tr class="odd">
@@ -823,7 +863,7 @@ or 400 units.</p>
 <td align="left">lag_y</td>
 <td align="right">0.800</td>
 <td align="right">0.314</td>
-<td align="right">0.334</td>
+<td align="right">0.333</td>
 <td align="right">0.105</td>
 <td align="right">0.340</td>
 </tr>
@@ -831,27 +871,27 @@ or 400 units.</p>
 <td align="left">dyn_static</td>
 <td align="left">x1</td>
 <td align="right">1.000</td>
-<td align="right">-0.017</td>
+<td align="right">-0.016</td>
 <td align="right">0.075</td>
-<td align="right">0.915</td>
-<td align="right">0.260</td>
+<td align="right">0.920</td>
+<td align="right">0.259</td>
 </tr>
 <tr class="odd">
 <td align="left">dyn_static</td>
 <td align="left">x2</td>
 <td align="right">-1.000</td>
 <td align="right">0.021</td>
-<td align="right">0.080</td>
+<td align="right">0.081</td>
 <td align="right">0.875</td>
-<td align="right">0.259</td>
+<td align="right">0.260</td>
 </tr>
 <tr class="even">
 <td align="left">dyn_static</td>
 <td align="left">rho</td>
 <td align="right">0.400</td>
 <td align="right">0.003</td>
-<td align="right">0.055</td>
-<td align="right">0.885</td>
+<td align="right">0.056</td>
+<td align="right">0.860</td>
 <td align="right">0.166</td>
 </tr>
 </tbody>
@@ -872,7 +912,7 @@ process, with state dependence
 (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>σ</mi><mi>α</mi></msub><mo>=</mo><mn>0.8</mn></mrow><annotation encoding="application/x-tex">\sigma_\alpha = 0.8</annotation></semantics></math>),
 and fit three models to it. The Wooldridge random-effects model recovers
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>γ</mi><annotation encoding="application/x-tex">\gamma</annotation></semantics></math>
-(bias 0.01, coverage 0.92). The pooled dynamic model attributes the
+(bias 0.01, coverage 0.93). The pooled dynamic model attributes the
 heterogeneity to state dependence:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>γ</mi><annotation encoding="application/x-tex">\gamma</annotation></semantics></math>
 is overstated by 0.31 and the slopes are biased towards zero, so its
@@ -964,7 +1004,7 @@ where they used one chain of 2,000.</p>
 <td align="right">1.054</td>
 <td align="right">0.030</td>
 <td align="right">0.035</td>
-<td align="right">0.887</td>
+<td align="right">0.884</td>
 <td align="right">0.00</td>
 </tr>
 <tr class="even">
@@ -988,11 +1028,11 @@ where they used one chain of 2,000.</p>
 <td align="right">0.099</td>
 <td align="right">0.695</td>
 <td align="right">0.572</td>
-<td align="right">1.031</td>
+<td align="right">1.032</td>
 <td align="right">1.117</td>
-<td align="right">0.023</td>
+<td align="right">0.022</td>
 <td align="right">0.043</td>
-<td align="right">0.909</td>
+<td align="right">0.904</td>
 <td align="right">0.04</td>
 </tr>
 <tr class="even">
@@ -1002,12 +1042,12 @@ where they used one chain of 2,000.</p>
 <td align="right">0.097</td>
 <td align="right">0.886</td>
 <td align="right">0.845</td>
-<td align="right">1.040</td>
+<td align="right">1.039</td>
 <td align="right">1.832</td>
 <td align="right">0.023</td>
 <td align="right">0.188</td>
-<td align="right">0.869</td>
-<td align="right">0.80</td>
+<td align="right">0.873</td>
+<td align="right">0.70</td>
 </tr>
 <tr class="odd">
 <td align="right">0.5</td>
@@ -1020,7 +1060,7 @@ where they used one chain of 2,000.</p>
 <td align="right">1.158</td>
 <td align="right">0.055</td>
 <td align="right">0.046</td>
-<td align="right">0.891</td>
+<td align="right">0.889</td>
 <td align="right">0.00</td>
 </tr>
 <tr class="even">
@@ -1030,11 +1070,11 @@ where they used one chain of 2,000.</p>
 <td align="right">0.507</td>
 <td align="right">0.570</td>
 <td align="right">0.494</td>
-<td align="right">1.082</td>
+<td align="right">1.083</td>
 <td align="right">1.217</td>
 <td align="right">0.017</td>
 <td align="right">0.076</td>
-<td align="right">0.902</td>
+<td align="right">0.900</td>
 <td align="right">0.00</td>
 </tr>
 <tr class="odd">
@@ -1042,14 +1082,14 @@ where they used one chain of 2,000.</p>
 <td align="right">0.7</td>
 <td align="right">0.490</td>
 <td align="right">0.514</td>
-<td align="right">0.671</td>
+<td align="right">0.672</td>
 <td align="right">0.623</td>
 <td align="right">1.110</td>
 <td align="right">1.302</td>
 <td align="right">0.009</td>
 <td align="right">0.101</td>
-<td align="right">0.878</td>
-<td align="right">0.00</td>
+<td align="right">0.882</td>
+<td align="right">0.02</td>
 </tr>
 <tr class="even">
 <td align="right">0.5</td>
@@ -1060,23 +1100,23 @@ where they used one chain of 2,000.</p>
 <td align="right">0.863</td>
 <td align="right">1.117</td>
 <td align="right">1.768</td>
-<td align="right">0.080</td>
+<td align="right">0.081</td>
 <td align="right">0.278</td>
-<td align="right">0.876</td>
-<td align="right">0.64</td>
+<td align="right">0.884</td>
+<td align="right">0.66</td>
 </tr>
 <tr class="odd">
 <td align="right">0.9</td>
 <td align="right">0.1</td>
 <td align="right">0.902</td>
 <td align="right">0.919</td>
-<td align="right">0.095</td>
+<td align="right">0.094</td>
 <td align="right">-0.001</td>
 <td align="right">1.048</td>
 <td align="right">1.290</td>
-<td align="right">0.038</td>
+<td align="right">0.037</td>
 <td align="right">0.191</td>
-<td align="right">0.909</td>
+<td align="right">0.911</td>
 <td align="right">0.00</td>
 </tr>
 <tr class="even">
@@ -1084,33 +1124,33 @@ where they used one chain of 2,000.</p>
 <td align="right">0.6</td>
 <td align="right">0.898</td>
 <td align="right">0.921</td>
-<td align="right">0.569</td>
+<td align="right">0.568</td>
 <td align="right">0.498</td>
-<td align="right">1.120</td>
+<td align="right">1.121</td>
 <td align="right">1.232</td>
 <td align="right">0.028</td>
 <td align="right">0.140</td>
-<td align="right">0.902</td>
-<td align="right">0.00</td>
+<td align="right">0.900</td>
+<td align="right">0.02</td>
 </tr>
 <tr class="odd">
 <td align="right">0.9</td>
 <td align="right">0.7</td>
 <td align="right">0.905</td>
 <td align="right">0.909</td>
-<td align="right">0.681</td>
+<td align="right">0.680</td>
 <td align="right">0.616</td>
-<td align="right">1.040</td>
+<td align="right">1.043</td>
 <td align="right">1.307</td>
-<td align="right">0.041</td>
+<td align="right">0.042</td>
 <td align="right">0.181</td>
 <td align="right">0.878</td>
-<td align="right">0.02</td>
+<td align="right">0.08</td>
 </tr>
 <tr class="even">
 <td align="right">0.9</td>
 <td align="right">0.9</td>
-<td align="right">0.915</td>
+<td align="right">0.914</td>
 <td align="right">0.863</td>
 <td align="right">0.881</td>
 <td align="right">0.855</td>
@@ -1118,8 +1158,8 @@ where they used one chain of 2,000.</p>
 <td align="right">1.498</td>
 <td align="right">0.061</td>
 <td align="right">0.154</td>
-<td align="right">0.876</td>
-<td align="right">0.76</td>
+<td align="right">0.873</td>
+<td align="right">0.70</td>
 </tr>
 </tbody>
 </table>
@@ -1145,7 +1185,7 @@ chains differ from ours, so this does not locate the source of their
 bias.</p>
 <p>When
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ρ</mi><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\rho = 0.9</annotation></semantics></math>,
-two thirds to four fifths of the fits still have
+two thirds to seven tenths of the fits still have
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mi>R</mi><mo accent="true">̂</mo></mover><mo>≥</mo><mn>1.05</mn></mrow><annotation encoding="application/x-tex">\hat R \geq 1.05</annotation></semantics></math>
 at our chain length. The effects are then nearly a common level shared
 by all units, which trades off against the intercept, so the thresholds
@@ -1175,17 +1215,17 @@ near-diffuse priors): the posterior means agree within 0.65 posterior
 standard deviations for all ten parameters, with
 <code>spatialprobit</code> started from good values (its defaults fail
 on these data). Given the SBC result above, exact agreement is not
-expected. <code>panelspatialprobit</code> was about 8 times faster.</li>
+expected. <code>panelspatialprobit</code> was about 9 times faster.</li>
 <li>
 <strong><code><a href="https://rdrr.io/pkg/spatialprobit/man/sarorderedprobit.html" class="external-link">spatialprobit::sarorderedprobit</a></code></strong>
 (simulated pooled SAR ordered probit, 20 × 20 grid,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">T = 1</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">J = 4</annotation></semantics></math>,
-near-diffuse priors): every posterior mean agrees within 0.07 posterior
+near-diffuse priors): every posterior mean agrees within 0.08 posterior
 standard deviations. The cut-points of <code>spatialprobit</code> mix
 slowly: an effective sample size of about 400 from 200,000 draws,
-against 6,000–7,000 here from 32,000 draws, which took 2 s instead of 4
-minutes.</li>
+against 6,000–7,000 here from 32,000 draws, which took 1.3 s instead of
+4 minutes.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -1227,63 +1267,63 @@ make those figures a rough guide.</p>
 <td align="left">SAR probit</td>
 <td align="left">1,000</td>
 <td align="right">10</td>
-<td align="right">1.4</td>
-<td align="left">35.3 to 58.6</td>
-<td align="left">sigma_alpha</td>
+<td align="right">1.0</td>
+<td align="left">32.7 to 94.2</td>
+<td align="left">(Intercept)</td>
 </tr>
 <tr class="even">
 <td align="left">SAR ordered probit (J = 4)</td>
 <td align="left">1,000</td>
 <td align="right">10</td>
-<td align="right">1.8</td>
-<td align="left">23.0 to 80.0</td>
+<td align="right">1.2</td>
+<td align="left">36.0 to 120.1</td>
 <td align="left">(Intercept)</td>
 </tr>
 <tr class="odd">
 <td align="left">SEM probit</td>
 <td align="left">1,000</td>
 <td align="right">10</td>
-<td align="right">2.4</td>
-<td align="left">9.0 to 40.5</td>
+<td align="right">1.9</td>
+<td align="left">11.6 to 42.9</td>
 <td align="left">lambda</td>
 </tr>
 <tr class="even">
 <td align="left">SAR probit</td>
 <td align="left">10,000</td>
 <td align="right">20</td>
-<td align="right">33.3</td>
-<td align="left">0.7 to 2.3</td>
+<td align="right">23.6</td>
+<td align="left">1.1 to 4.3</td>
 <td align="left">(Intercept)</td>
 </tr>
 <tr class="odd">
 <td align="left">SAR ordered probit (J = 4)</td>
 <td align="left">10,000</td>
 <td align="right">20</td>
-<td align="right">43.4</td>
-<td align="left">0.5 to 3.7</td>
+<td align="right">29.7</td>
+<td align="left">0.6 to 5.2</td>
 <td align="left">(Intercept)</td>
 </tr>
 <tr class="even">
 <td align="left">SEM probit</td>
 <td align="left">10,000</td>
 <td align="right">20</td>
-<td align="right">74.9</td>
-<td align="left">0.5 to 1.4</td>
+<td align="right">39.6</td>
+<td align="left">0.7 to 2.4</td>
 <td align="left">lambda</td>
 </tr>
 </tbody>
 </table>
 <p>The ordered model costs about a quarter more per iteration than the
 binary one, mainly for the cut-point updates. The SEM model costs about
-twice as much, mainly because the precision of the random effects
+1.8 times as much, mainly because the precision of the random effects
 depends on
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>λ</mi><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>
 and must be factorised again in every iteration. At
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>N</mi><mo>=</mo><mn>10</mn><mo>,</mo><mn>000</mn></mrow><annotation encoding="application/x-tex">N = 10{,}000</annotation></semantics></math>
 and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><mn>20</mn></mrow><annotation encoding="application/x-tex">T = 20</annotation></semantics></math>
-(200,000 observations), 10,000 iterations take about 5.6 minutes for the
-SAR probit and 12.5 minutes for the SEM probit. The script is
+(200,000 observations), 10,000 iterations take about 3.9 minutes for the
+SAR probit and 6.6 minutes for the SEM probit. The script is
 <code>validation/bench/bench_models.R</code>.</p>
 <div class="section level3">
 <h3 id="cut-points">Cut-points<a class="anchor" aria-label="anchor" href="#cut-points"></a>

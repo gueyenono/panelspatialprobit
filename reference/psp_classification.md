@@ -36,18 +36,18 @@ fit <- psprobit(y ~ x1, data = d, index = c("id", "time"), W = W, impacts = FALS
 #> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 100) for: (Intercept), x1, rho, sigma_alpha. Consider more iterations.
 psp_classification(fit, draws = 50)
 #> $hit_rate
-#> [1] 0.6041667
+#> [1] 0.625
 #> 
 #> $auc
-#> [1] 0.6381119
+#> [1] 0.6398601
 #> 
 #> $brier
-#> [1] 0.2349346
+#> [1] 0.235556
 #> 
 #> $confusion
 #>         predicted
 #> observed  0  1
-#>        0 20  6
-#>        1 13  9
+#>        0 18  8
+#>        1 10 12
 #> 
 ```

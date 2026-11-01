@@ -11,6 +11,7 @@ psp_control(
   thin = 1,
   chains = 4,
   cores = 1,
+  threads_per_chain = 1,
   seed = NULL,
   z_sweeps = 1,
   rho_range = c(-1, 1),
@@ -48,7 +49,18 @@ psp_control(
 
   Number of chains run at once, on separate threads (on every operating
   system, Windows included). Results do not depend on `cores`. Under
-  `R CMD check` (`_R_CHECK_LIMIT_CORES_`) at most 2 are used.
+  `R CMD check` (`_R_CHECK_LIMIT_CORES_`) at most 2 threads are used in
+  total.
+
+- threads_per_chain:
+
+  Threads used within each chain by the sweep over the latent variables,
+  which updates the periods in parallel (each period with its own random
+  number substream, so results do not depend on `threads_per_chain`
+  either). It pays off for large panels, with many units per period and
+  at least as many periods as threads: for N = 10,000 and T = 20, 4
+  threads make a binary SAR fit about twice as fast. Keep
+  `cores * threads_per_chain` at most the number of physical cores.
 
 - seed:
 
@@ -148,6 +160,9 @@ psp_control(iter = 500, warmup = 250, chains = 2)
 #> [1] 2
 #> 
 #> $cores
+#> [1] 1
+#> 
+#> $threads_per_chain
 #> [1] 1
 #> 
 #> $seed

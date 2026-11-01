@@ -70,24 +70,24 @@ d <- sim_psprobit(W, T = 5, beta = c(-0.2, 1, -0.8), theta = c(0.5, 0), rho = 0.
 fit <- psprobit(y ~ x1 + x2, data = d, index = c("id", "time"), W = W,
                 model = "sdm", control = ctrl)
 #> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 200) for:
-#> rho. Consider more iterations.
+#> x1. Consider more iterations.
 fit$impacts
 #> Impacts on P(y = 1) (posterior mean, sd, 95% interval; 500 draws)
 #> 
 #> direct:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.1883 0.0201  0.1480  0.2265
-#> x2 -0.1413 0.0202 -0.1814 -0.1029
+#> x1  0.1862 0.0206  0.1444  0.2286
+#> x2 -0.1418 0.0199 -0.1768 -0.1015
 #> 
 #> indirect:
 #>       mean     sd    q2.5  q97.5
-#> x1  0.2874 0.0581  0.1738 0.4018
-#> x2 -0.0725 0.0538 -0.1741 0.0329
+#> x1  0.2873 0.0589  0.1709 0.4002
+#> x2 -0.0745 0.0567 -0.1856 0.0362
 #> 
 #> total:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.4757 0.0588  0.3562  0.5913
-#> x2 -0.2138 0.0611 -0.3295 -0.0939
+#> x1  0.4735 0.0594  0.3558  0.5860
+#> x2 -0.2162 0.0633 -0.3385 -0.0911
 ```
 
 The spillover of $`x_1`$ is larger than its direct effect: its own
@@ -122,8 +122,8 @@ fit_sem$impacts
 #> 
 #> direct:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.1888 0.0272  0.1305  0.2365
-#> x2 -0.1497 0.0227 -0.1955 -0.1055
+#> x1  0.1875 0.0260  0.1325  0.2336
+#> x2 -0.1496 0.0215 -0.1898 -0.1056
 #> 
 #> indirect:
 #>    mean sd q2.5 q97.5
@@ -132,8 +132,8 @@ fit_sem$impacts
 #> 
 #> total:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.1888 0.0272  0.1305  0.2365
-#> x2 -0.1497 0.0227 -0.1955 -0.1055
+#> x1  0.1875 0.0260  0.1325  0.2336
+#> x2 -0.1496 0.0215 -0.1898 -0.1056
 ```
 
 Here the SEM is the wrong model: it attributes the spillover of $`x_1`$
@@ -165,18 +165,18 @@ psp_impacts(fit, scale = "lesage_pace")
 #> 
 #> direct:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.2160 0.0223  0.1709  0.2584
-#> x2 -0.1621 0.0219 -0.2074 -0.1221
+#> x1  0.2133 0.0215  0.1712  0.2525
+#> x2 -0.1625 0.0222 -0.2003 -0.1166
 #> 
 #> indirect:
 #>       mean     sd    q2.5  q97.5
-#> x1  0.3305 0.0696  0.2022 0.4781
-#> x2 -0.0828 0.0616 -0.1979 0.0388
+#> x1  0.3299 0.0689  0.1996 0.4704
+#> x2 -0.0854 0.0649 -0.2121 0.0422
 #> 
 #> total:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.5464 0.0713  0.4161  0.6909
-#> x2 -0.2449 0.0685 -0.3750 -0.1120
+#> x1  0.5431 0.0687  0.4158  0.6854
+#> x2 -0.2479 0.0720 -0.3871 -0.1048
 ```
 
 The impacts are larger, because they ignore the extra variance. The
@@ -200,18 +200,18 @@ psp_impacts(fit, type = "unit", draws = 300)
 #> 
 #> direct:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.1968 0.0206  0.1574  0.2376
-#> x2 -0.1463 0.0222 -0.1881 -0.1003
+#> x1  0.1950 0.0203  0.1557  0.2336
+#> x2 -0.1482 0.0228 -0.1917 -0.1047
 #> 
 #> indirect:
 #>       mean     sd    q2.5  q97.5
-#> x1  0.3108 0.0650  0.1865 0.4418
-#> x2 -0.0750 0.0545 -0.1702 0.0451
+#> x1  0.3045 0.0642  0.1901 0.4394
+#> x2 -0.0733 0.0575 -0.1811 0.0381
 #> 
 #> total:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.5076 0.0663  0.3632  0.6382
-#> x2 -0.2214 0.0646 -0.3334 -0.0827
+#> x1  0.4995 0.0677  0.3763  0.6441
+#> x2 -0.2215 0.0670 -0.3503 -0.0782
 ```
 
 Unit impacts are larger than population impacts. A unit with a known
@@ -231,7 +231,7 @@ dr <- fit$impacts$draws
 share <- dr[, "x1", 1, "indirect"] / dr[, "x1", 1, "total"]
 quantile(share, c(0.05, 0.5, 0.95))
 #>        5%       50%       95% 
-#> 0.4976683 0.6036779 0.6879632
+#> 0.4960277 0.6072987 0.6912909
 ```
 
 `summary(imp)` returns the table as a data frame, one row per variable,
@@ -258,7 +258,7 @@ and periods with new regressor values:
 d_up <- d
 d_up$x1 <- d_up$x1 + 1
 mean(predict(fit, newdata = d_up) - predict(fit))
-#> [1] 0.4231255
+#> [1] 0.4232681
 ```
 
 The average change in probability is close to the total impact of

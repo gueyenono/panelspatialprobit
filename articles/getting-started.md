@@ -94,8 +94,6 @@ fit <- psprobit(y ~ x1 + x2, data = d, index = c("id", "time"), W = W,
                 model = "sar", effects = "random",
                 control = psp_control(iter = 3000, warmup = 1000, chains = 2,
                                       seed = 1, progress = FALSE))
-#> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 200) for:
-#> x2, sigma_alpha. Consider more iterations.
 fit
 #> Bayesian panel spatial probit (model = sar, effects = random) 
 #> Call: psprobit(formula = y ~ x1 + x2, data = d, index = c("id", "time"), 
@@ -103,7 +101,7 @@ fit
 #>         warmup = 1000, chains = 2, seed = 1, progress = FALSE))
 #> 
 #> (Intercept)          x1          x2         rho sigma_alpha 
-#>      -0.352       1.250      -0.910       0.533       0.923
+#>      -0.351       1.251      -0.915       0.533       0.925
 ```
 
 [`psp_control()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_control.md)
@@ -145,30 +143,30 @@ summary(fit)
 #> 
 #> Posterior summary:
 #>               mean    sd   q2.5  q97.5  rhat ess_bulk ess_tail
-#> (Intercept) -0.352 0.117 -0.585 -0.122 1.004      499     1073
-#> x1           1.250 0.142  0.984  1.541 1.008      452     1052
-#> x2          -0.910 0.114 -1.145 -0.697 1.015      555     1111
-#> rho          0.533 0.060  0.408  0.641 1.002      590     1312
-#> sigma_alpha  0.923 0.165  0.623  1.268 1.016      254      551
+#> (Intercept) -0.351 0.117 -0.584 -0.123 1.002      569     1115
+#> x1           1.251 0.139  0.991  1.542 1.005      405      727
+#> x2          -0.915 0.117 -1.146 -0.686 1.005      507     1268
+#> rho          0.533 0.057  0.419  0.640 1.001      744     1422
+#> sigma_alpha  0.925 0.163  0.606  1.261 1.003      230      441
 #> 
-#> In-sample classification: hit rate 0.760, AUC 0.843
+#> In-sample classification: hit rate 0.756, AUC 0.843
 #> 
 #> Impacts on P(y = 1) (posterior mean, sd, 95% interval; 500 draws)
 #> 
 #> direct:
 #>      mean    sd   q2.5  q97.5
-#> x1  0.218 0.015  0.186  0.246
-#> x2 -0.158 0.015 -0.185 -0.128
+#> x1  0.217 0.016  0.187  0.247
+#> x2 -0.159 0.014 -0.186 -0.132
 #> 
 #> indirect:
 #>      mean    sd   q2.5  q97.5
-#> x1  0.210 0.045  0.131  0.299
-#> x2 -0.152 0.033 -0.222 -0.094
+#> x1  0.209 0.041  0.136  0.296
+#> x2 -0.153 0.032 -0.221 -0.097
 #> 
 #> total:
 #>      mean    sd   q2.5  q97.5
-#> x1  0.428 0.051  0.332  0.531
-#> x2 -0.310 0.040 -0.389 -0.230
+#> x1  0.427 0.047  0.339  0.530
+#> x2 -0.312 0.040 -0.404 -0.243
 ```
 
 The truth here is $`\beta = (-0.2, 1, -0.8)`$, $`\rho = 0.5`$ and
@@ -204,18 +202,18 @@ fit$impacts
 #> 
 #> direct:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.2179 0.0151  0.1865  0.2455
-#> x2 -0.1580 0.0147 -0.1853 -0.1284
+#> x1  0.2174 0.0155  0.1873  0.2472
+#> x2 -0.1590 0.0144 -0.1864 -0.1323
 #> 
 #> indirect:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.2103 0.0452  0.1310  0.2993
-#> x2 -0.1523 0.0329 -0.2215 -0.0940
+#> x1  0.2095 0.0413  0.1363  0.2961
+#> x2 -0.1534 0.0319 -0.2214 -0.0969
 #> 
 #> total:
 #>       mean     sd    q2.5   q97.5
-#> x1  0.4281 0.0509  0.3325  0.5312
-#> x2 -0.3102 0.0398 -0.3891 -0.2301
+#> x1  0.4269 0.0473  0.3386  0.5305
+#> x2 -0.3124 0.0396 -0.4038 -0.2428
 ```
 
 Impacts are computed by default after fitting.
@@ -236,20 +234,13 @@ the draws.
 
 imp_unit <- psp_impacts(fit, type = "unit", by_period = TRUE, draws = 200)
 head(summary(imp_unit))
-#>   variable category   effect period       mean         sd       q2.5
-#> 1       x1        1   direct    all  0.2189388 0.01325938  0.1919360
-#> 2       x2        1   direct    all -0.1612206 0.01296436 -0.1851400
-#> 3       x1        1 indirect    all  0.2145514 0.04952725  0.1400742
-#> 4       x2        1 indirect    all -0.1578239 0.03652958 -0.2279293
-#> 5       x1        1    total    all  0.4334903 0.05508990  0.3413155
-#> 6       x2        1    total    all -0.3190446 0.04251457 -0.4007015
-#>         q97.5
-#> 1  0.24413731
-#> 2 -0.13651429
-#> 3  0.32097676
-#> 4 -0.09813829
-#> 5  0.55018408
-#> 6 -0.24937381
+#>   variable category   effect period       mean         sd       q2.5      q97.5
+#> 1       x1        1   direct    all  0.2208096 0.01492168  0.1892897  0.2486705
+#> 2       x2        1   direct    all -0.1618325 0.01363099 -0.1866772 -0.1392160
+#> 3       x1        1 indirect    all  0.2147444 0.04477170  0.1418654  0.3045209
+#> 4       x2        1 indirect    all -0.1575337 0.03469548 -0.2410049 -0.1014747
+#> 5       x1        1    total    all  0.4355539 0.05022449  0.3461200  0.5301409
+#> 6       x2        1    total    all -0.3193662 0.04154884 -0.4108998 -0.2524161
 ```
 
 ## Predictions and fit
@@ -263,17 +254,17 @@ compares them with the observed outcomes:
 ``` r
 
 head(predict(fit))
-#> [1] 0.5264903 0.1808252 0.4148976 0.5207887 0.5538944 0.4500918
+#> [1] 0.5199544 0.1756604 0.4109442 0.5170297 0.5506444 0.4468923
 cl <- psp_classification(fit)
 cl$hit_rate
-#> [1] 0.762
+#> [1] 0.756
 cl$auc
-#> [1] 0.8431474
+#> [1] 0.8430437
 cl$confusion
 #>         predicted
 #> observed   0   1
-#>        0 270  48
-#>        1  71 111
+#>        0 271  47
+#>        1  75 107
 ```
 
 ## Richer specifications
@@ -299,13 +290,11 @@ fit_sdm <- psprobit(y ~ x1 + x2, data = d, index = c("id", "time"), W = W,
                     model = "sdm", cre = ~ x1, time_effects = TRUE, impacts = FALSE,
                     control = psp_control(iter = 3000, warmup = 1000, chains = 2,
                                           seed = 2, progress = FALSE))
-#> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 200) for:
-#> sigma_alpha. Consider more iterations.
 round(coef(fit_sdm), 2)
 #> (Intercept)          x1          x2        W_x1        W_x2     mean_x1 
-#>       -0.28        1.32       -0.95       -0.04       -0.06        0.05 
+#>       -0.27        1.33       -0.95       -0.08       -0.05        0.04 
 #>      time_2      time_3      time_4      time_5         rho sigma_alpha 
-#>        0.01       -0.30       -0.12       -0.13        0.52        1.01
+#>        0.01       -0.30       -0.12       -0.14        0.53        1.02
 ```
 
 **Dynamics.** `dynamic = psp_dynamic()` adds the previous period’s
@@ -326,12 +315,12 @@ fit_dyn <- psprobit(y ~ x1 + x2, data = d_dyn, index = c("id", "time"), W = W,
                     control = psp_control(iter = 3000, warmup = 1000, chains = 2,
                                           seed = 3, progress = FALSE))
 #> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 200) for:
-#> x2, sigma_alpha. Consider more iterations.
+#> sigma_alpha. Consider more iterations.
 round(coef(fit_dyn), 2)
 #> (Intercept)          x1          x2       lag_y      init_y     mean_x1 
-#>       -0.65        1.07       -1.06        0.87        0.41        0.12 
+#>       -0.64        1.05       -1.04        0.87        0.41        0.14 
 #>     mean_x2         rho sigma_alpha 
-#>        0.39        0.51        0.23
+#>        0.39        0.51        0.17
 ```
 
 Because the outcome feeds back into later periods, a change in a
@@ -349,11 +338,11 @@ psp_response_path(fit_dyn, "x1", draws = 200, nsim = 10, seed = 1)
 #> 
 #> Average change over all units:
 #>  horizon period   mean     sd   q2.5  q97.5
-#>        0      2 0.3224 0.0316 0.2638 0.3837
-#>        1      3 0.1156 0.0304 0.0633 0.1942
-#>        2      4 0.0416 0.0198 0.0175 0.0958
-#>        3      5 0.0133 0.0097 0.0025 0.0359
-#>        4      6 0.0058 0.0058 0.0002 0.0199
+#>        0      2 0.3189 0.0286 0.2715 0.3762
+#>        1      3 0.1152 0.0292 0.0626 0.1713
+#>        2      4 0.0424 0.0191 0.0134 0.0867
+#>        3      5 0.0135 0.0086 0.0021 0.0330
+#>        4      6 0.0059 0.0051 0.0004 0.0173
 ```
 
 The first row is the short-run impact. The later rows come only from the
@@ -415,26 +404,26 @@ psp_ppc(fit, draws = 200, seed = 1)
 #> 
 #> share:
 #>            observed rep_mean rep_q2.5 rep_q97.5   ppp
-#> P(y=1) t=1     0.44    0.391     0.30      0.50 0.185
-#> P(y=1) t=2     0.38    0.336     0.24      0.44 0.225
-#> P(y=1) t=3     0.35    0.417     0.32      0.52 0.905
-#> P(y=1) t=4     0.35    0.359     0.27      0.47 0.575
-#> P(y=1) t=5     0.30    0.297     0.21      0.40 0.515
+#> P(y=1) t=1     0.44    0.398     0.29      0.52 0.245
+#> P(y=1) t=2     0.38    0.341     0.26      0.43 0.260
+#> P(y=1) t=3     0.35    0.420     0.32      0.51 0.920
+#> P(y=1) t=4     0.35    0.358     0.27      0.46 0.600
+#> P(y=1) t=5     0.30    0.301     0.21      0.40 0.560
 #> 
 #> moran:
 #>           observed rep_mean rep_q2.5 rep_q97.5   ppp
-#> Moran t=1    0.266    0.201    0.063     0.352 0.210
-#> Moran t=2    0.234    0.178    0.046     0.308 0.215
-#> Moran t=3    0.141    0.200    0.023     0.375 0.790
-#> Moran t=4    0.047    0.200    0.044     0.360 0.965
-#> Moran t=5    0.130    0.063   -0.101     0.220 0.230
+#> Moran t=1    0.266    0.207    0.048     0.390 0.240
+#> Moran t=2    0.234    0.183    0.032     0.317 0.265
+#> Moran t=3    0.141    0.205    0.067     0.358 0.840
+#> Moran t=4    0.047    0.184    0.034     0.314 0.960
+#> Moran t=5    0.130    0.059   -0.080     0.211 0.175
 #> 
 #> persistence:
 #>             observed rep_mean rep_q2.5 rep_q97.5   ppp
-#> persist t=2     0.56    0.589     0.49      0.69 0.730
-#> persist t=3     0.61    0.601     0.51      0.70 0.455
-#> persist t=4     0.56    0.577     0.49      0.67 0.625
-#> persist t=5     0.67    0.636     0.55      0.72 0.280
+#> persist t=2     0.56    0.585     0.49     0.670 0.695
+#> persist t=3     0.61    0.606     0.52     0.701 0.510
+#> persist t=4     0.56    0.578     0.48     0.660 0.730
+#> persist t=5     0.67    0.636     0.55     0.730 0.285
 ```
 
 **Model comparison.** The likelihood of a spatial probit is a

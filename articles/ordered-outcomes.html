@@ -141,19 +141,19 @@ categories on a 10 × 10 grid observed over 5 periods:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Posterior summary:</span></span>
 <span><span class="co">#&gt;                    mean    sd   q2.5  q97.5  rhat ess_bulk ess_tail</span></span>
-<span><span class="co">#&gt; (Intercept)       0.126 0.097 -0.060  0.319 1.002      737     1444</span></span>
-<span><span class="co">#&gt; x1                1.072 0.088  0.903  1.249 1.003     1030     2184</span></span>
-<span><span class="co">#&gt; x2               -0.933 0.086 -1.102 -0.763 1.001     1110     2569</span></span>
-<span><span class="co">#&gt; rho               0.511 0.049  0.413  0.605 1.000     1202     2434</span></span>
-<span><span class="co">#&gt; sigma_alpha       0.751 0.109  0.547  0.974 1.004      498      873</span></span>
-<span><span class="co">#&gt; cut[low|medium]   0.868 0.091  0.701  1.053 1.002      638     1198</span></span>
-<span><span class="co">#&gt; cut[medium|high]  1.720 0.126  1.481  1.973 1.001      705     1473</span></span>
+<span><span class="co">#&gt; (Intercept)       0.122 0.095 -0.062  0.315 1.001      841     1219</span></span>
+<span><span class="co">#&gt; x1                1.076 0.087  0.909  1.248 1.002     1209     2415</span></span>
+<span><span class="co">#&gt; x2               -0.932 0.086 -1.102 -0.766 1.005     1144     2634</span></span>
+<span><span class="co">#&gt; rho               0.511 0.048  0.414  0.601 1.000     1398     2839</span></span>
+<span><span class="co">#&gt; sigma_alpha       0.744 0.111  0.538  0.968 1.003      586      915</span></span>
+<span><span class="co">#&gt; cut[low|medium]   0.861 0.089  0.698  1.044 1.001      821     1347</span></span>
+<span><span class="co">#&gt; cut[medium|high]  1.711 0.127  1.467  1.963 1.003      817     1540</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Thresholds in the MASS::polr parameterisation (no intercept, zeta_j = cut_j - (Intercept)):</span></span>
 <span><span class="co">#&gt;               mean    sd   q2.5 q97.5  rhat ess_bulk ess_tail</span></span>
-<span><span class="co">#&gt; none|low    -0.126 0.097 -0.319 0.060 1.002      737     1444</span></span>
-<span><span class="co">#&gt; low|medium   0.742 0.121  0.501 0.985 1.002      882     1758</span></span>
-<span><span class="co">#&gt; medium|high  1.594 0.147  1.303 1.892 1.001      980     1849</span></span>
+<span><span class="co">#&gt; none|low    -0.122 0.095 -0.315 0.062 1.001      841     1219</span></span>
+<span><span class="co">#&gt; low|medium   0.739 0.118  0.517 0.976 1.000      985     1809</span></span>
+<span><span class="co">#&gt; medium|high  1.589 0.144  1.311 1.871 1.001      930     1710</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; In-sample classification: hit rate 0.614</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -163,69 +163,69 @@ categories on a 10 × 10 grid observed over 5 periods:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1 -0.211 0.011 -0.234 -0.188</span></span>
-<span><span class="co">#&gt; x2  0.183 0.012  0.159  0.206</span></span>
+<span><span class="co">#&gt; x1 -0.212 0.011 -0.230 -0.190</span></span>
+<span><span class="co">#&gt; x2  0.185 0.011  0.163  0.206</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1 -0.187 0.033 -0.254 -0.131</span></span>
-<span><span class="co">#&gt; x2  0.162 0.027  0.110  0.217</span></span>
+<span><span class="co">#&gt; x1 -0.189 0.032 -0.252 -0.136</span></span>
+<span><span class="co">#&gt; x2  0.165 0.028  0.116  0.222</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
-<span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1 -0.397 0.036 -0.467 -0.336</span></span>
-<span><span class="co">#&gt; x2  0.345 0.031  0.288  0.407</span></span>
+<span><span class="co">#&gt;     mean    sd   q2.5  q97.5</span></span>
+<span><span class="co">#&gt; x1 -0.40 0.034 -0.466 -0.339</span></span>
+<span><span class="co">#&gt; x2  0.35 0.032  0.292  0.413</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Category low</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
-<span><span class="co">#&gt;    mean    sd   q2.5 q97.5</span></span>
-<span><span class="co">#&gt; x1    0 0.007 -0.014 0.015</span></span>
-<span><span class="co">#&gt; x2    0 0.007 -0.013 0.013</span></span>
+<span><span class="co">#&gt;      mean    sd   q2.5 q97.5</span></span>
+<span><span class="co">#&gt; x1  0.001 0.007 -0.011 0.015</span></span>
+<span><span class="co">#&gt; x2 -0.001 0.006 -0.014 0.011</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
-<span><span class="co">#&gt;    mean    sd   q2.5 q97.5</span></span>
-<span><span class="co">#&gt; x1    0 0.007 -0.014 0.013</span></span>
-<span><span class="co">#&gt; x2    0 0.006 -0.011 0.012</span></span>
+<span><span class="co">#&gt;      mean    sd   q2.5 q97.5</span></span>
+<span><span class="co">#&gt; x1  0.001 0.006 -0.011 0.014</span></span>
+<span><span class="co">#&gt; x2 -0.001 0.006 -0.012 0.010</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
-<span><span class="co">#&gt;    mean    sd   q2.5 q97.5</span></span>
-<span><span class="co">#&gt; x1    0 0.014 -0.028 0.027</span></span>
-<span><span class="co">#&gt; x2    0 0.012 -0.025 0.025</span></span>
+<span><span class="co">#&gt;      mean    sd   q2.5 q97.5</span></span>
+<span><span class="co">#&gt; x1  0.002 0.013 -0.023 0.030</span></span>
+<span><span class="co">#&gt; x2 -0.002 0.012 -0.025 0.021</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Category medium</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.030 0.007  0.017  0.043</span></span>
-<span><span class="co">#&gt; x2 -0.026 0.006 -0.039 -0.014</span></span>
+<span><span class="co">#&gt; x1  0.031 0.007  0.018  0.043</span></span>
+<span><span class="co">#&gt; x2 -0.027 0.006 -0.038 -0.016</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.026 0.007  0.014  0.041</span></span>
-<span><span class="co">#&gt; x2 -0.023 0.006 -0.035 -0.012</span></span>
+<span><span class="co">#&gt; x1  0.027 0.007  0.015  0.043</span></span>
+<span><span class="co">#&gt; x2 -0.024 0.006 -0.037 -0.013</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.057 0.013  0.031  0.081</span></span>
-<span><span class="co">#&gt; x2 -0.049 0.012 -0.071 -0.027</span></span>
+<span><span class="co">#&gt; x1  0.058 0.013  0.033  0.083</span></span>
+<span><span class="co">#&gt; x2 -0.050 0.011 -0.073 -0.030</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Category high</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.180 0.013  0.154  0.205</span></span>
-<span><span class="co">#&gt; x2 -0.157 0.013 -0.181 -0.132</span></span>
+<span><span class="co">#&gt; x1  0.180 0.013  0.154  0.204</span></span>
+<span><span class="co">#&gt; x2 -0.157 0.012 -0.180 -0.134</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.160 0.031  0.108  0.224</span></span>
-<span><span class="co">#&gt; x2 -0.139 0.025 -0.191 -0.094</span></span>
+<span><span class="co">#&gt; x1  0.161 0.029  0.113  0.223</span></span>
+<span><span class="co">#&gt; x2 -0.140 0.026 -0.198 -0.097</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
 <span><span class="co">#&gt;      mean    sd   q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.340 0.038  0.279  0.420</span></span>
-<span><span class="co">#&gt; x2 -0.296 0.032 -0.358 -0.235</span></span></code></pre></div>
+<span><span class="co">#&gt; x1  0.341 0.036  0.277  0.416</span></span>
+<span><span class="co">#&gt; x2 -0.298 0.032 -0.367 -0.240</span></span></code></pre></div>
 <p>The truth is
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>β</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>0.2</mn><mo>,</mo><mn>1</mn><mo>,</mo><mi>−</mi><mn>0.8</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\beta = (0.2, 1, -0.8)</annotation></semantics></math>,
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ρ</mi><mo>=</mo><mn>0.5</mn></mrow><annotation encoding="application/x-tex">\rho = 0.5</annotation></semantics></math>,
@@ -245,13 +245,13 @@ over the categories.</p>
 <code class="sourceCode R"><span><span class="va">imp</span> <span class="op">&lt;-</span> <span class="va">fit</span><span class="op">$</span><span class="va">impacts</span></span>
 <span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">imp</span><span class="op">)</span></span>
 <span><span class="va">s</span><span class="op">[</span><span class="va">s</span><span class="op">$</span><span class="va">variable</span> <span class="op">==</span> <span class="st">"x1"</span> <span class="op">&amp;</span> <span class="va">s</span><span class="op">$</span><span class="va">effect</span> <span class="op">==</span> <span class="st">"total"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"category"</span>, <span class="st">"mean"</span>, <span class="st">"q2.5"</span>, <span class="st">"q97.5"</span><span class="op">)</span><span class="op">]</span></span>
-<span><span class="co">#&gt;    category          mean        q2.5       q97.5</span></span>
-<span><span class="co">#&gt; 17     none -0.3970782465 -0.46653413 -0.33591238</span></span>
-<span><span class="co">#&gt; 19      low  0.0004226489 -0.02845663  0.02705857</span></span>
-<span><span class="co">#&gt; 21   medium  0.0565979051  0.03058806  0.08141688</span></span>
-<span><span class="co">#&gt; 23     high  0.3400576925  0.27881770  0.41981368</span></span>
+<span><span class="co">#&gt;    category         mean        q2.5       q97.5</span></span>
+<span><span class="co">#&gt; 17     none -0.400464702 -0.46609936 -0.33897627</span></span>
+<span><span class="co">#&gt; 19      low  0.002032479 -0.02273775  0.02978470</span></span>
+<span><span class="co">#&gt; 21   medium  0.057716139  0.03259027  0.08328227</span></span>
+<span><span class="co">#&gt; 23     high  0.340716084  0.27657645  0.41639009</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">s</span><span class="op">$</span><span class="va">mean</span><span class="op">[</span><span class="va">s</span><span class="op">$</span><span class="va">variable</span> <span class="op">==</span> <span class="st">"x1"</span> <span class="op">&amp;</span> <span class="va">s</span><span class="op">$</span><span class="va">effect</span> <span class="op">==</span> <span class="st">"total"</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] -3.122502e-17</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] -4.336809e-19</span></span></code></pre></div>
 <p>The options of <code><a href="../reference/psp_impacts.html">psp_impacts()</a></code>
 (<code>type = "unit"</code>, <code>by_period = TRUE</code>,
 <code>scale = "lesage_pace"</code>) work as for binary models.</p>
@@ -267,18 +267,18 @@ category.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;       none   low medium  high</span></span>
-<span><span class="co">#&gt; [1,] 0.015 0.039  0.092 0.854</span></span>
-<span><span class="co">#&gt; [2,] 0.426 0.227  0.179 0.168</span></span>
-<span><span class="co">#&gt; [3,] 0.442 0.230  0.175 0.153</span></span>
-<span><span class="co">#&gt; [4,] 0.752 0.146  0.070 0.033</span></span>
-<span><span class="co">#&gt; [5,] 0.324 0.229  0.209 0.239</span></span>
-<span><span class="co">#&gt; [6,] 0.097 0.141  0.208 0.555</span></span>
+<span><span class="co">#&gt; [1,] 0.015 0.038  0.092 0.855</span></span>
+<span><span class="co">#&gt; [2,] 0.432 0.226  0.177 0.165</span></span>
+<span><span class="co">#&gt; [3,] 0.449 0.229  0.173 0.149</span></span>
+<span><span class="co">#&gt; [4,] 0.761 0.142  0.067 0.031</span></span>
+<span><span class="co">#&gt; [5,] 0.327 0.229  0.208 0.236</span></span>
+<span><span class="co">#&gt; [6,] 0.096 0.140  0.208 0.556</span></span>
 <span><span class="fu"><a href="../reference/psp_classification.html">psp_classification</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">$</span><span class="va">confusion</span></span>
 <span><span class="co">#&gt;         predicted</span></span>
 <span><span class="co">#&gt; observed none low medium high</span></span>
 <span><span class="co">#&gt;   none    194   0      0   22</span></span>
 <span><span class="co">#&gt;   low      56   0      0   24</span></span>
-<span><span class="co">#&gt;   medium   31   0      0   37</span></span>
+<span><span class="co">#&gt;   medium   32   0      0   36</span></span>
 <span><span class="co">#&gt;   high     23   0      0  113</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -295,9 +295,9 @@ the cut-point can move far in one step. Its step size is tuned during
 warm-up; the acceptance rates after warm-up are stored in the fit:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span><span class="op">$</span><span class="va">cut_accept</span></span>
-<span><span class="co">#&gt;           [,1]      [,2]</span></span>
-<span><span class="co">#&gt; [1,] 0.2343333 0.3120000</span></span>
-<span><span class="co">#&gt; [2,] 0.3496667 0.4353333</span></span></code></pre></div>
+<span><span class="co">#&gt;       [,1]      [,2]</span></span>
+<span><span class="co">#&gt; [1,] 0.233 0.3223333</span></span>
+<span><span class="co">#&gt; [2,] 0.354 0.4400000</span></span></code></pre></div>
 <p><code>cutpoint_sampler = "albert_chib"</code> uses the Gibbs step
 alone. Both samplers target the same posterior and pass simulation-based
 calibration; the transformation move gives a higher effective sample

@@ -53,6 +53,7 @@
 <span>  thin <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  chains <span class="op">=</span> <span class="fl">4</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  threads_per_chain <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  z_sweeps <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  rho_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span>
@@ -91,7 +92,18 @@
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
 <dd><p>Number of chains run at once, on separate threads (on every
 operating system, Windows included). Results do not depend on <code>cores</code>.
-Under <code>R CMD check</code> (<code>_R_CHECK_LIMIT_CORES_</code>) at most 2 are used.</p></dd>
+Under <code>R CMD check</code> (<code>_R_CHECK_LIMIT_CORES_</code>) at most 2 threads are used
+in total.</p></dd>
+
+
+<dt id="arg-threads-per-chain">threads_per_chain<a class="anchor" aria-label="anchor" href="#arg-threads-per-chain"></a></dt>
+<dd><p>Threads used within each chain by the sweep over
+the latent variables, which updates the periods in parallel (each period
+with its own random number substream, so results do not depend on
+<code>threads_per_chain</code> either). It pays off for large panels, with many
+units per period and at least as many periods as threads: for N = 10,000
+and T = 20, 4 threads make a binary SAR fit about twice as fast. Keep
+<code>cores * threads_per_chain</code> at most the number of physical cores.</p></dd>
 
 
 <dt id="arg-seed">seed<a class="anchor" aria-label="anchor" href="#arg-seed"></a></dt>
@@ -190,6 +202,9 @@ the plan or the number of workers.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $cores</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $threads_per_chain</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $seed</span>

@@ -55,26 +55,30 @@ $`\sim N(1, 1)`$), 500 replications per variant, two chains, 400 thinned
 posterior draws per fit. Uniformity of each parameter’s ranks is tested
 by a chi-square test on 10 bins.
 
-In all, 47 runs of 30 variants were made, with 298 rank tests. Under
+In all, 50 runs of 30 variants were made, with 316 rank tests. Under
 correct calibration the p-values of these tests are themselves uniform:
 about 5% should fall below 0.05 and 1% below 0.01 by chance alone.
 
 ![Histogram and uniform quantile plot of SBC
 p-values](validation_files/figure-html/unnamed-chunk-2-1.png)
 
-The p-values are close to uniform. Of the 298 tests, 21 fall below 0.05
-and 1 below 0.01:
+The p-values are close to uniform. Of the 316 tests, 16 fall below 0.05
+and 3 below 0.01:
 
-| variant        | seed offset | parameter |        p | median max R-hat |
-|:---------------|------------:|:----------|---------:|-----------------:|
-| sar_lat_re_bin |           0 | lag_z     | 0.000793 |           1.0155 |
+| variant          | seed offset | parameter   |       p | median max R-hat |
+|:-----------------|------------:|:------------|--------:|-----------------:|
+| sar_lat_re_bin   |           0 | (Intercept) | 0.00839 |           1.0180 |
+| sar_lat_re_bin   |           0 | lag_z       | 0.00181 |           1.0180 |
+| sarar_tv_re_ord3 |           0 | lambda      | 0.00513 |           1.0103 |
 
-It comes from the latent AR model with SAR at the default chain length
-(red in the right panel). There the ranks of the latent AR coefficient
+Two come from the latent AR model with SAR at the default chain length
+(red in the right panel), and the third, $`\lambda`$ in the SARAR model
+with time-varying weights, passes in a replication with other seeds (p =
+0.464). In the latent AR model the ranks of the latent AR coefficient
 are U-shaped, and the failures concentrate in the replications whose
 chains had not converged (max $`\hat R \geq 1.02`$): the sampler mixes
 slowly, rather than targeting the wrong distribution. A replication with
-other seeds passes (p = 0.08), and so does the same variant with chains
+other seeds passes (p = 0.074), and so does the same variant with chains
 three times as long:
 
 ![Rank histograms of the latent AR coefficient at two chain
@@ -96,52 +100,55 @@ the median over replications of the largest $`\hat R`$):
 
 | variant              | seed offset | parameters | min p | median max R-hat |
 |:---------------------|------------:|-----------:|------:|-----------------:|
-| none_re_bin          |           0 |          4 | 0.270 |            1.006 |
-| sar_chamberlain_bin  |           0 |          9 | 0.019 |            1.011 |
+| none_re_bin          |           0 |          4 | 0.164 |            1.006 |
+| sar_chamberlain_bin  |           0 |          9 | 0.056 |            1.010 |
 | sar_chamberlain_bin  |           1 |          9 | 0.047 |            1.010 |
-| sar_dyn_bin          |           0 |          9 | 0.032 |            1.010 |
+| sar_dyn_bin          |           0 |          9 | 0.056 |            1.010 |
 | sar_dyn_bin          |           1 |          9 | 0.023 |            1.010 |
-| sar_lat_re_bin       |           0 |          6 | 0.001 |            1.016 |
-| sar_lat_re_bin       |           1 |          6 | 0.068 |            1.017 |
-| sar_lat_re_bin_long  |           0 |          6 | 0.078 |            1.013 |
-| sar_mundlak_bin      |           0 |          6 | 0.053 |            1.008 |
-| sar_pool_bin         |           0 |          4 | 0.079 |            1.006 |
-| sar_re_bin           |           0 |          5 | 0.276 |            1.007 |
-| sar_re_bin_missing   |           0 |          5 | 0.011 |            1.008 |
+| sar_lat_re_bin       |           0 |          6 | 0.002 |            1.018 |
+| sar_lat_re_bin       |           1 |          6 | 0.074 |            1.017 |
+| sar_lat_re_bin_long  |           0 |          6 | 0.144 |            1.012 |
+| sar_mundlak_bin      |           0 |          6 | 0.058 |            1.008 |
+| sar_pool_bin         |           0 |          4 | 0.124 |            1.007 |
+| sar_re_bin           |           0 |          5 | 0.025 |            1.007 |
+| sar_re_bin           |           1 |          5 | 0.423 |            1.007 |
+| sar_re_bin_missing   |           0 |          5 | 0.087 |            1.008 |
 | sar_re_bin_missing   |           1 |          5 | 0.127 |            1.008 |
-| sar_re_ord3          |           0 |          6 | 0.036 |            1.008 |
-| sar_re_ord3          |           1 |          6 | 0.239 |            1.008 |
-| sar_re_ord3_missing  |           0 |          6 | 0.188 |            1.009 |
-| sar_re_ord4          |           0 |          7 | 0.106 |            1.009 |
-| sar_re_ord4_ac       |           0 |          7 | 0.106 |            1.009 |
-| sar_sre_bin          |           0 |          6 | 0.047 |            1.009 |
+| sar_re_ord3          |           0 |          6 | 0.048 |            1.008 |
+| sar_re_ord3          |           1 |          6 | 0.013 |            1.008 |
+| sar_re_ord3_missing  |           0 |          6 | 0.104 |            1.009 |
+| sar_re_ord4          |           0 |          7 | 0.015 |            1.008 |
+| sar_re_ord4          |           1 |          7 | 0.022 |            1.009 |
+| sar_re_ord4_ac       |           0 |          7 | 0.098 |            1.010 |
+| sar_sre_bin          |           0 |          6 | 0.059 |            1.009 |
 | sar_sre_bin          |           1 |          6 | 0.149 |            1.008 |
-| sar_t_re_bin         |           0 |          5 | 0.013 |            1.008 |
-| sar_t_re_bin         |           1 |          5 | 0.048 |            1.008 |
-| sar_tv_re_bin        |           0 |          5 | 0.058 |            1.008 |
-| sarar_re_bin         |           0 |          6 | 0.200 |            1.009 |
-| sarar_re_ord3        |           0 |          7 | 0.016 |            1.009 |
-| sarar_re_ord3        |           1 |          7 | 0.012 |            1.009 |
-| sarar_t_re_ord3      |           0 |          7 | 0.011 |            1.010 |
-| sarar_t_re_ord3      |           1 |          7 | 0.137 |            1.010 |
+| sar_t_re_bin         |           0 |          5 | 0.039 |            1.008 |
+| sar_t_re_bin         |           1 |          5 | 0.018 |            1.007 |
+| sar_tv_re_bin        |           0 |          5 | 0.060 |            1.007 |
+| sarar_re_bin         |           0 |          6 | 0.047 |            1.009 |
+| sarar_re_bin         |           1 |          6 | 0.161 |            1.008 |
+| sarar_re_ord3        |           0 |          7 | 0.040 |            1.010 |
+| sarar_re_ord3        |           1 |          7 | 0.110 |            1.010 |
+| sarar_t_re_ord3      |           0 |          7 | 0.021 |            1.010 |
+| sarar_t_re_ord3      |           1 |          7 | 0.025 |            1.010 |
 | sarar_t_re_ord3      |           2 |          7 | 0.055 |            1.010 |
-| sarar_t_re_ord3_long |           0 |          7 | 0.027 |            1.008 |
+| sarar_t_re_ord3_long |           0 |          7 | 0.131 |            1.008 |
 | sarar_t_re_ord3_long |           1 |          7 | 0.209 |            1.009 |
-| sarar_tv_re_ord3     |           0 |          7 | 0.034 |            1.009 |
-| sarar_tv_re_ord3     |           1 |          7 | 0.113 |            1.010 |
-| sdem_re_bin          |           0 |          7 | 0.022 |            1.008 |
+| sarar_tv_re_ord3     |           0 |          7 | 0.005 |            1.010 |
+| sarar_tv_re_ord3     |           1 |          7 | 0.060 |            1.010 |
+| sdem_re_bin          |           0 |          7 | 0.121 |            1.008 |
 | sdem_re_bin          |           1 |          7 | 0.230 |            1.008 |
-| sdm_re_bin           |           0 |          7 | 0.284 |            1.009 |
-| sem_lat_re_ord3      |           0 |          7 | 0.097 |            1.012 |
+| sdm_re_bin           |           0 |          7 | 0.174 |            1.009 |
+| sem_lat_re_ord3      |           0 |          7 | 0.114 |            1.012 |
 | sem_lat_re_ord3      |           1 |          7 | 0.079 |            1.012 |
-| sem_pool_bin         |           0 |          4 | 0.188 |            1.006 |
-| sem_re_bin           |           0 |          5 | 0.031 |            1.008 |
+| sem_pool_bin         |           0 |          4 | 0.063 |            1.006 |
+| sem_re_bin           |           0 |          5 | 0.115 |            1.007 |
 | sem_re_bin           |           1 |          5 | 0.209 |            1.007 |
-| sem_re_ord3          |           0 |          6 | 0.142 |            1.008 |
-| sem_sre_ord3         |           0 |          7 | 0.035 |            1.010 |
+| sem_re_ord3          |           0 |          6 | 0.220 |            1.008 |
+| sem_sre_ord3         |           0 |          7 | 0.273 |            1.009 |
 | sem_sre_ord3         |           1 |          7 | 0.122 |            1.009 |
-| sem_t_re_ord3        |           0 |          6 | 0.331 |            1.008 |
-| slx_re_bin           |           0 |          6 | 0.026 |            1.008 |
+| sem_t_re_ord3        |           0 |          6 | 0.423 |            1.008 |
+| slx_re_bin           |           0 |          6 | 0.075 |            1.008 |
 | slx_re_bin           |           1 |          6 | 0.270 |            1.008 |
 
 Variant names give the model, the random effects (`re`: random, `pool`:
@@ -190,34 +197,34 @@ with 10 periods on rook grids of $`N = 100`$ or 400 units.
 
 | design         | parameter   |   true |   bias |  RMSE | 90% coverage | interval width |
 |:---------------|:------------|-------:|-------:|------:|-------------:|---------------:|
-| sar_bin_N100   | x1          |  1.000 |  0.012 | 0.079 |        0.895 |          0.257 |
-| sar_bin_N100   | x2          | -1.000 | -0.012 | 0.076 |        0.915 |          0.257 |
-| sar_bin_N100   | rho         |  0.500 | -0.005 | 0.046 |        0.900 |          0.143 |
-| sar_bin_N100   | sigma_alpha |  0.700 |  0.015 | 0.095 |        0.910 |          0.321 |
-| sar_bin_N100   | impact_x1   |  0.377 | -0.003 | 0.028 |        0.910 |          0.096 |
-| sar_bin_N400   | x1          |  1.000 |  0.004 | 0.037 |        0.915 |          0.126 |
-| sar_bin_N400   | x2          | -1.000 | -0.005 | 0.039 |        0.905 |          0.126 |
-| sar_bin_N400   | rho         |  0.500 | -0.004 | 0.022 |        0.910 |          0.074 |
-| sar_bin_N400   | sigma_alpha |  0.700 |  0.002 | 0.048 |        0.900 |          0.156 |
-| sar_bin_N400   | impact_x1   |  0.380 | -0.002 | 0.015 |        0.880 |          0.049 |
+| sar_bin_N100   | x1          |  1.000 |  0.012 | 0.080 |        0.905 |          0.256 |
+| sar_bin_N100   | x2          | -1.000 | -0.012 | 0.076 |        0.915 |          0.256 |
+| sar_bin_N100   | rho         |  0.500 | -0.005 | 0.047 |        0.890 |          0.142 |
+| sar_bin_N100   | sigma_alpha |  0.700 |  0.015 | 0.096 |        0.905 |          0.321 |
+| sar_bin_N100   | impact_x1   |  0.377 | -0.003 | 0.028 |        0.885 |          0.095 |
+| sar_bin_N400   | x1          |  1.000 |  0.004 | 0.037 |        0.910 |          0.126 |
+| sar_bin_N400   | x2          | -1.000 | -0.005 | 0.038 |        0.910 |          0.127 |
+| sar_bin_N400   | rho         |  0.500 | -0.004 | 0.022 |        0.915 |          0.074 |
+| sar_bin_N400   | sigma_alpha |  0.700 |  0.003 | 0.048 |        0.910 |          0.156 |
+| sar_bin_N400   | impact_x1   |  0.380 | -0.002 | 0.015 |        0.900 |          0.050 |
 | sar_ord4_N100  | x1          |  1.000 |  0.007 | 0.057 |        0.920 |          0.196 |
-| sar_ord4_N100  | x2          | -1.000 | -0.010 | 0.062 |        0.885 |          0.195 |
-| sar_ord4_N100  | rho         |  0.500 | -0.003 | 0.034 |        0.890 |          0.113 |
-| sar_ord4_N100  | sigma_alpha |  0.700 |  0.012 | 0.079 |        0.900 |          0.262 |
-| sar_ord4_N100  | cut\[2\|3\] |  0.800 |  0.011 | 0.060 |        0.910 |          0.203 |
-| sar_ord4_N100  | cut\[3\|4\] |  1.600 |  0.017 | 0.091 |        0.885 |          0.285 |
-| sar_ord4_N100  | impact_x1   |  0.283 | -0.001 | 0.025 |        0.880 |          0.081 |
-| dyn_wooldridge | x1          |  1.000 |  0.040 | 0.089 |        0.885 |          0.274 |
-| dyn_wooldridge | x2          | -1.000 | -0.036 | 0.091 |        0.865 |          0.273 |
-| dyn_wooldridge | rho         |  0.400 | -0.012 | 0.053 |        0.890 |          0.162 |
-| dyn_wooldridge | lag_y       |  0.800 |  0.009 | 0.118 |        0.920 |          0.416 |
-| dyn_pooled     | x1          |  1.000 | -0.176 | 0.187 |        0.140 |          0.204 |
-| dyn_pooled     | x2          | -1.000 |  0.180 | 0.193 |        0.155 |          0.204 |
-| dyn_pooled     | rho         |  0.400 | -0.025 | 0.058 |        0.840 |          0.160 |
-| dyn_pooled     | lag_y       |  0.800 |  0.314 | 0.334 |        0.105 |          0.340 |
-| dyn_static     | x1          |  1.000 | -0.017 | 0.075 |        0.915 |          0.260 |
-| dyn_static     | x2          | -1.000 |  0.021 | 0.080 |        0.875 |          0.259 |
-| dyn_static     | rho         |  0.400 |  0.003 | 0.055 |        0.885 |          0.166 |
+| sar_ord4_N100  | x2          | -1.000 | -0.010 | 0.062 |        0.880 |          0.195 |
+| sar_ord4_N100  | rho         |  0.500 | -0.003 | 0.034 |        0.895 |          0.113 |
+| sar_ord4_N100  | sigma_alpha |  0.700 |  0.012 | 0.079 |        0.910 |          0.263 |
+| sar_ord4_N100  | cut\[2\|3\] |  0.800 |  0.011 | 0.060 |        0.910 |          0.202 |
+| sar_ord4_N100  | cut\[3\|4\] |  1.600 |  0.017 | 0.091 |        0.900 |          0.285 |
+| sar_ord4_N100  | impact_x1   |  0.283 | -0.001 | 0.025 |        0.875 |          0.082 |
+| dyn_wooldridge | x1          |  1.000 |  0.040 | 0.089 |        0.890 |          0.273 |
+| dyn_wooldridge | x2          | -1.000 | -0.035 | 0.091 |        0.875 |          0.274 |
+| dyn_wooldridge | rho         |  0.400 | -0.012 | 0.053 |        0.900 |          0.161 |
+| dyn_wooldridge | lag_y       |  0.800 |  0.010 | 0.118 |        0.925 |          0.416 |
+| dyn_pooled     | x1          |  1.000 | -0.176 | 0.187 |        0.140 |          0.205 |
+| dyn_pooled     | x2          | -1.000 |  0.180 | 0.193 |        0.160 |          0.204 |
+| dyn_pooled     | rho         |  0.400 | -0.024 | 0.058 |        0.850 |          0.160 |
+| dyn_pooled     | lag_y       |  0.800 |  0.314 | 0.333 |        0.105 |          0.340 |
+| dyn_static     | x1          |  1.000 | -0.016 | 0.075 |        0.920 |          0.259 |
+| dyn_static     | x2          | -1.000 |  0.021 | 0.081 |        0.875 |          0.260 |
+| dyn_static     | rho         |  0.400 |  0.003 | 0.056 |        0.860 |          0.166 |
 
 The static designs (binary SAR at $`N = 100`$ and 400, ordered SAR with
 four categories) show biases of at most 0.02 and coverage between 0.88
@@ -228,7 +235,7 @@ Quadrupling $`N`$ halves the RMSE and interval widths, as it should.
 The dynamic designs (`dyn_*`) use one data-generating process, with
 state dependence ($`\gamma = 0.8`$, `lag_y`) and random effects
 ($`\sigma_\alpha = 0.8`$), and fit three models to it. The Wooldridge
-random-effects model recovers $`\gamma`$ (bias 0.01, coverage 0.92). The
+random-effects model recovers $`\gamma`$ (bias 0.01, coverage 0.93). The
 pooled dynamic model attributes the heterogeneity to state dependence:
 $`\gamma`$ is overstated by 0.31 and the slopes are biased towards zero,
 so its intervals almost never cover the truth. The static random-effects
@@ -266,18 +273,18 @@ where they used one chain of 2,000.
 
 | λ | ρ | λ: ours | λ: W&K | ρ: ours | ρ: W&K | σ²: ours | σ²: W&K | max slope bias: ours | max slope bias: W&K | 90% coverage | share R-hat ≥ 1.05 |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 0.1 | 0.1 | 0.095 | 0.097 | 0.088 | 0.048 | 1.039 | 1.054 | 0.030 | 0.035 | 0.887 | 0.00 |
+| 0.1 | 0.1 | 0.095 | 0.097 | 0.088 | 0.048 | 1.039 | 1.054 | 0.030 | 0.035 | 0.884 | 0.00 |
 | 0.1 | 0.6 | 0.101 | 0.101 | 0.595 | 0.452 | 1.003 | 1.091 | 0.024 | 0.028 | 0.904 | 0.00 |
-| 0.1 | 0.7 | 0.098 | 0.099 | 0.695 | 0.572 | 1.031 | 1.117 | 0.023 | 0.043 | 0.909 | 0.04 |
-| 0.1 | 0.9 | 0.104 | 0.097 | 0.886 | 0.845 | 1.040 | 1.832 | 0.023 | 0.188 | 0.869 | 0.80 |
-| 0.5 | 0.1 | 0.499 | 0.492 | 0.088 | 0.039 | 1.006 | 1.158 | 0.055 | 0.046 | 0.891 | 0.00 |
-| 0.5 | 0.6 | 0.495 | 0.507 | 0.570 | 0.494 | 1.082 | 1.217 | 0.017 | 0.076 | 0.902 | 0.00 |
-| 0.5 | 0.7 | 0.490 | 0.514 | 0.671 | 0.623 | 1.110 | 1.302 | 0.009 | 0.101 | 0.878 | 0.00 |
-| 0.5 | 0.9 | 0.498 | 0.511 | 0.875 | 0.863 | 1.117 | 1.768 | 0.080 | 0.278 | 0.876 | 0.64 |
-| 0.9 | 0.1 | 0.902 | 0.919 | 0.095 | -0.001 | 1.048 | 1.290 | 0.038 | 0.191 | 0.909 | 0.00 |
-| 0.9 | 0.6 | 0.898 | 0.921 | 0.569 | 0.498 | 1.120 | 1.232 | 0.028 | 0.140 | 0.902 | 0.00 |
-| 0.9 | 0.7 | 0.905 | 0.909 | 0.681 | 0.616 | 1.040 | 1.307 | 0.041 | 0.181 | 0.878 | 0.02 |
-| 0.9 | 0.9 | 0.915 | 0.863 | 0.881 | 0.855 | 1.099 | 1.498 | 0.061 | 0.154 | 0.876 | 0.76 |
+| 0.1 | 0.7 | 0.098 | 0.099 | 0.695 | 0.572 | 1.032 | 1.117 | 0.022 | 0.043 | 0.904 | 0.04 |
+| 0.1 | 0.9 | 0.104 | 0.097 | 0.886 | 0.845 | 1.039 | 1.832 | 0.023 | 0.188 | 0.873 | 0.70 |
+| 0.5 | 0.1 | 0.499 | 0.492 | 0.088 | 0.039 | 1.006 | 1.158 | 0.055 | 0.046 | 0.889 | 0.00 |
+| 0.5 | 0.6 | 0.495 | 0.507 | 0.570 | 0.494 | 1.083 | 1.217 | 0.017 | 0.076 | 0.900 | 0.00 |
+| 0.5 | 0.7 | 0.490 | 0.514 | 0.672 | 0.623 | 1.110 | 1.302 | 0.009 | 0.101 | 0.882 | 0.02 |
+| 0.5 | 0.9 | 0.498 | 0.511 | 0.875 | 0.863 | 1.117 | 1.768 | 0.081 | 0.278 | 0.884 | 0.66 |
+| 0.9 | 0.1 | 0.902 | 0.919 | 0.094 | -0.001 | 1.048 | 1.290 | 0.037 | 0.191 | 0.911 | 0.00 |
+| 0.9 | 0.6 | 0.898 | 0.921 | 0.568 | 0.498 | 1.121 | 1.232 | 0.028 | 0.140 | 0.900 | 0.02 |
+| 0.9 | 0.7 | 0.905 | 0.909 | 0.680 | 0.616 | 1.043 | 1.307 | 0.042 | 0.181 | 0.878 | 0.08 |
+| 0.9 | 0.9 | 0.914 | 0.863 | 0.881 | 0.855 | 1.099 | 1.498 | 0.061 | 0.154 | 0.873 | 0.70 |
 
 The columns give the averages of the posterior means over the 50 data
 sets (true $`\sigma^2 = 1`$), the largest absolute bias of the four
@@ -293,7 +300,7 @@ to 1.8, and $`\rho`$ understated when it is small. Their heteroskedastic
 design and shorter chains differ from ours, so this does not locate the
 source of their bias.
 
-When $`\rho = 0.9`$, two thirds to four fifths of the fits still have
+When $`\rho = 0.9`$, two thirds to seven tenths of the fits still have
 $`\hat R \geq 1.05`$ at our chain length. The effects are then nearly a
 common level shared by all units, which trades off against the
 intercept, so the thresholds (not the slopes) mix slowly. Their RMSE is
@@ -316,14 +323,14 @@ should agree up to Monte Carlo error.
   standard deviations for all ten parameters, with `spatialprobit`
   started from good values (its defaults fail on these data). Given the
   SBC result above, exact agreement is not expected.
-  `panelspatialprobit` was about 8 times faster.
+  `panelspatialprobit` was about 9 times faster.
 - **[`spatialprobit::sarorderedprobit`](https://rdrr.io/pkg/spatialprobit/man/sarorderedprobit.html)**
   (simulated pooled SAR ordered probit, 20 × 20 grid, $`T = 1`$,
   $`J = 4`$, near-diffuse priors): every posterior mean agrees within
-  0.07 posterior standard deviations. The cut-points of `spatialprobit`
+  0.08 posterior standard deviations. The cut-points of `spatialprobit`
   mix slowly: an effective sample size of about 400 from 200,000 draws,
-  against 6,000–7,000 here from 32,000 draws, which took 2 s instead of
-  4 minutes.
+  against 6,000–7,000 here from 32,000 draws, which took 1.3 s instead
+  of 4 minutes.
 
 ## 5. Speed and mixing
 
@@ -340,20 +347,20 @@ those figures a rough guide.
 
 | model | N | T | ms per iteration | ESS per second | slowest parameter |
 |:---|:---|---:|---:|:---|:---|
-| SAR probit | 1,000 | 10 | 1.4 | 35.3 to 58.6 | sigma_alpha |
-| SAR ordered probit (J = 4) | 1,000 | 10 | 1.8 | 23.0 to 80.0 | (Intercept) |
-| SEM probit | 1,000 | 10 | 2.4 | 9.0 to 40.5 | lambda |
-| SAR probit | 10,000 | 20 | 33.3 | 0.7 to 2.3 | (Intercept) |
-| SAR ordered probit (J = 4) | 10,000 | 20 | 43.4 | 0.5 to 3.7 | (Intercept) |
-| SEM probit | 10,000 | 20 | 74.9 | 0.5 to 1.4 | lambda |
+| SAR probit | 1,000 | 10 | 1.0 | 32.7 to 94.2 | (Intercept) |
+| SAR ordered probit (J = 4) | 1,000 | 10 | 1.2 | 36.0 to 120.1 | (Intercept) |
+| SEM probit | 1,000 | 10 | 1.9 | 11.6 to 42.9 | lambda |
+| SAR probit | 10,000 | 20 | 23.6 | 1.1 to 4.3 | (Intercept) |
+| SAR ordered probit (J = 4) | 10,000 | 20 | 29.7 | 0.6 to 5.2 | (Intercept) |
+| SEM probit | 10,000 | 20 | 39.6 | 0.7 to 2.4 | lambda |
 
 The ordered model costs about a quarter more per iteration than the
 binary one, mainly for the cut-point updates. The SEM model costs about
-twice as much, mainly because the precision of the random effects
+1.8 times as much, mainly because the precision of the random effects
 depends on $`\lambda`$ and must be factorised again in every iteration.
 At $`N = 10{,}000`$ and $`T = 20`$ (200,000 observations), 10,000
-iterations take about 5.6 minutes for the SAR probit and 12.5 minutes
-for the SEM probit. The script is `validation/bench/bench_models.R`.
+iterations take about 3.9 minutes for the SAR probit and 6.6 minutes for
+the SEM probit. The script is `validation/bench/bench_models.R`.
 
 ### Cut-points
 
