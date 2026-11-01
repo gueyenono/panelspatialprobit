@@ -101,8 +101,7 @@ fn psp_rs_next_stream(seed: IntegerSexp, substream: bool) -> savvy::Result<Sexp>
     Ok(OwnedIntegerSexp::try_from_slice(next.seed())?.into())
 }
 
-/// Truncated normal draws, N(mean, sd^2) on `[lo, hi]` (replaces
-/// `psp_rtnorm_cpp`).
+/// Truncated normal draws, N(mean, sd^2) on `[lo, hi]`.
 ///
 /// @param n Number of draws.
 /// @param mean,sd,lo,hi Parameters and bounds (bounds may be infinite).
@@ -281,8 +280,7 @@ fn chain_list(o: ChainOutput, has_re: bool) -> savvy::Result<OwnedListSexp> {
     Ok(out)
 }
 
-/// Runs the MCMC chains (replaces `psp_sampler_cpp` and `mcmapply`): chain c
-/// starts from column c of `seeds`, and up to `threads` chains run at once.
+/// Runs the MCMC chains: chain c starts from column c of `seeds`, and up to `threads` chains run at once.
 /// The draws do not depend on `threads`.
 ///
 /// @param model Data, weights and flags from `.psp_rs_model()`.
@@ -290,7 +288,8 @@ fn chain_list(o: ChainOutput, has_re: bool) -> savvy::Result<OwnedListSexp> {
 /// @param seeds 6 x chains integer matrix of L'Ecuyer-CMRG seeds.
 /// @param threads Chains run at once.
 /// @param progress Print progress.
-/// @return A list of chains, each with the fields of the C++ engine's result.
+/// @return A list of chains, each with `draws`, `z_mean`, `alpha_mean`,
+/// `alpha_sd`, `cut_accept`, `cut_step`, `alpha_draws` and `v_mean`.
 /// @noRd
 #[savvy]
 fn psp_rs_sample(
@@ -326,8 +325,7 @@ fn psp_rs_sample(
     Ok(res.into())
 }
 
-/// The cut-point updates on a toy ordered model, for `test-cutmove.R`
-/// (replaces `psp_cut_kernel_cpp`, with an explicit seed).
+/// The cut-point updates on a toy ordered model, for `test-cutmove.R`.
 ///
 /// @noRd
 #[savvy]

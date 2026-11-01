@@ -29,7 +29,7 @@ $$
 
 where $A = \operatorname{blockdiag}_t(R_t S_t)$ and $b = R(X\beta + \Delta\alpha)$. The Jacobian of the latent density is $\log|A| = \sum_t \big(\log|I - \rho W_t| + \log|I - \lambda M_t|\big)$.
 
-The C++ engine therefore needs only four operations:
+The engine therefore needs only four operations:
 
 - a sparse $A$, rebuilt when $\rho$ or $\lambda$ changes (only the values change, not the sparsity pattern);
 - a residual vector $r = Az - b$;
@@ -215,4 +215,4 @@ These are to be re-baselined after the Phase 1 benchmark.
 - **Per-iteration cost:** $O(\mathrm{nnz}(W)\,T + nk)$; no $n \times n$ object is ever formed.
 - **Memory:** draws are stored for parameters only; $z$ is kept as a running posterior mean unless `save_latent = TRUE`.
 - **Targets on a laptop core:** SAR-RE binary with $N = 1{,}000$, $T = 10$, $k = 5$ runs 10,000 iterations in about a minute or less, and $N = 10{,}000$, $T = 20$ runs in about 30 minutes or less.
-- **Parallelism:** chains run in parallel at the R level (`parallel`, with L'Ecuyer-CMRG streams). There is no OpenMP inside a chain in v1, because of RNG reproducibility.
+- **Parallelism:** chains run in parallel on Rust threads (`psp_control(cores = )`, every OS), each with its own L'Ecuyer-CMRG stream from `.psp_streams()`, so the draws do not depend on `cores`. Within a chain the sweep is sequential (a period-parallel sweep is R6 in `06`). Post-processing (impacts, predict, PPC, response paths, GHK) spreads blocks of draws over the user's `future::plan()`, each Rust call single-threaded (`06`, R-D11). *Until 2026-10-31 (C++ engine): chains ran in parallel at the R level with `parallel::mcmapply` (forking, so not on Windows).*

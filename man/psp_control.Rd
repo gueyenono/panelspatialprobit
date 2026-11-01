@@ -34,9 +34,14 @@ psp_control(
 \item{chains}{Number of chains.}
 
 \item{cores}{Number of chains run at once, on separate threads (on every
-operating system). Results do not depend on \code{cores}.}
+operating system, Windows included). Results do not depend on \code{cores}.
+Under \verb{R CMD check} (\verb{_R_CHECK_LIMIT_CORES_}) at most 2 are used.}
 
-\item{seed}{Optional integer seed. Results are reproducible given \code{seed}.}
+\item{seed}{Optional integer seed. Given \code{seed}, results are reproducible
+on a given platform, whatever \code{cores} and the user's \code{\link[=RNGkind]{RNGkind()}}: each
+chain draws from its own L'Ecuyer-CMRG stream derived from \code{seed}, and
+the session's random number state is left unchanged. Without \code{seed}, one
+is drawn from the session's generator (\code{fit$seed}).}
 
 \item{z_sweeps}{Number of Gibbs sweeps over the latent variables per
 iteration.}
@@ -69,8 +74,7 @@ used.}
 which probabilities and impacts are averaged for Student-t errors
 (\code{\link[=psp_t]{psp_t()}}).}
 
-\item{progress}{Logical; print sampling progress (only when chains run
-sequentially, i.e. \code{cores = 1}).}
+\item{progress}{Logical; print sampling progress, for each chain.}
 }
 \value{
 An object of class \code{psp_control}.

@@ -1,4 +1,4 @@
-# Pure-R reference sampler (dense, slow): the test oracle for the C++ engine.
+# Pure-R reference sampler (dense, slow): the test oracle for the Rust engine.
 #
 # Deliberately uses different algorithms where possible: the latent sweep
 # conditions through the dense precision matrix and mean, and rho is drawn by

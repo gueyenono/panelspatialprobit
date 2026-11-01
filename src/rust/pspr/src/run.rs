@@ -27,8 +27,8 @@ impl Printer {
         }
     }
 
-    /// MCMC progress: "Chain c: x% (warm-up)" or "(sampling)", as the C++
-    /// engine printed it, now also for chains run in parallel.
+    /// MCMC progress: "Chain c: x% (warm-up)" or "(sampling)", also for
+    /// chains run in parallel.
     pub fn mcmc(chains: usize, warmup: usize, iter: usize) -> Self {
         let mut p = Self::new("Chain", chains, warmup + iter);
         p.warmup = Some(warmup);

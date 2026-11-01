@@ -27,7 +27,8 @@ random, correlated random or spatially autocorrelated unit effects; state
 dependence through lagged outcomes with Wooldridge initial conditions or
 through latent AR(1) dynamics; Student-$t$ errors; time-varying weights; and
 missing outcomes. Every model reduces to one sparse latent Gaussian kernel,
-which a single C++ Gibbs sampler updates without solving linear systems.
+which a single Gibbs sampler, written in Rust, updates without solving linear
+systems.
 Ordered models add a joint transformation move on the cut-points and the
 latent values. The package reports impacts on probabilities, split into
 direct and spillover components, and response paths for dynamic models.
@@ -178,8 +179,8 @@ The paper makes four contributions.
 
 1. **A single sampler for the whole model family.** Given its spatial
    parameters, every model reduces to a latent Gaussian kernel
-   $\exp(-\tfrac12\|Az - b\|^2)$ with a sparse operator $A$. One C++ engine
-   serves all variants:
+   $\exp(-\tfrac12\|Az - b\|^2)$ with a sparse operator $A$. One engine,
+   written in Rust, serves all variants:
    - an exact latent update that costs $O(\operatorname{nnz}(A))$ per sweep
      and solves no linear systems;
    - a draw of $\rho$ from its exact conditional with $\beta$ integrated
@@ -697,9 +698,12 @@ $N = 10{,}000$ and $T = 20$ ($n = 200{,}000$), on the computer described in
 the computational details (Section 9). The factorisation roughly doubles
 the cost for a SEM model (Table 5). [TODO: rerun on the release version.]
 
-**Chains and reproducibility.** Each chain is one C++ call with its own
-L'Ecuyer-CMRG stream, so results do not depend on the number of cores, and
-the user's random number state is restored afterwards. By default four
+**Chains and reproducibility.** Each chain runs on its own thread with its
+own L'Ecuyer-CMRG stream, so results do not depend on the number of cores,
+and the user's random number state is left unchanged. Impacts, predictions
+and the other post-processing steps work through the posterior draws in
+blocks over the workers of the user's `future` plan (Bengtsson 2021), with
+results that do not depend on the plan. By default four
 chains are run. The fit reports the rank-normalised split-$\hat R$ and the
 bulk and tail ESS (Vehtari et al. 2021), and it warns when convergence is
 doubtful.
@@ -867,7 +871,7 @@ a known joint distribution of $(\kappa, z)$ on a toy model, one step of the
 kernel must leave that distribution unchanged.
 
 The test suite also contains a second sampler written in plain R that
-shares no sampling code with the C++ engine and deliberately uses different
+shares no sampling code with the Rust engine and deliberately uses different
 algorithms. It uses dense precision matrices instead of residual updates,
 random-walk Metropolis steps with exact log-determinants for $\rho$,
 $\lambda$, $\phi$ and the latent AR coefficient instead of grid draws, and
@@ -1759,9 +1763,13 @@ The results in this paper were obtained with R 4.6.0 (R Core Team 2026)
 and the development version 0.0.0.9000 of `panelspatialprobit` [TODO: rerun
 with the release version and update], together with `posterior` 1.7.0
 (Bürkner et al. 2026), `Matrix` 1.7-5 (Bates, Maechler & Jagan 2026),
-`Rcpp` 1.1.1-1.1 (Eddelbuettel & François 2011), `RcppEigen` 0.3.4.0.2
-(Bates & Eddelbuettel 2013), `spatialprobit` 1.0.4 and `MCMCpack` 1.7.1. The
-computations ran between 27 and 29 October 2026 on a desktop computer with an
+`future` 1.70.0 (Bengtsson 2021), `spatialprobit` 1.0.4 and `MCMCpack`
+1.7.1. The engine is written in Rust (rustc 1.97.1), with the `savvy` 0.11.0
+interface to R (Yutani 2026) and the `faer` 0.24.4 sparse linear algebra
+library (El Kazdadi 2026). [TODO: the tables were computed between 27 and 29
+October 2026 with the earlier C++ engine; the Rust engine reproduced them
+within Monte Carlo error on 31 October 2026 (`plan/06`, R4); regenerate them
+with the release version.] The computations ran between 27 and 29 October 2026 on a desktop computer with an
 Intel Core i7-4790K processor (4 cores, 8 threads, 4.0 GHz) and 16 GB of
 memory, under Pop!_OS 24.04 LTS (Linux). Timings are for a single core
 unless stated otherwise; the simulation studies ran their replications in
@@ -1947,15 +1955,17 @@ Software:
 R Core Team (2026). *R: A Language and Environment for Statistical
 Computing*. R Foundation for Statistical Computing, Vienna.
 
-Bates, D. and Eddelbuettel, D. (2013). Fast and elegant numerical linear
-algebra using the RcppEigen package. *Journal of Statistical Software*
-52(5), 1–24.
-
 Bates, D., Maechler, M. and Jagan, M. (2026). *Matrix: Sparse and Dense
 Matrix Classes and Methods*. R package version 1.7-5.
+
+Bengtsson, H. (2021). A unifying framework for parallel and distributed
+processing in R using futures. *The R Journal* 13(2), 208–227.
 
 Bürkner, P.-C., Gabry, J., Kay, M. and Vehtari, A. (2026). *posterior:
 Tools for Working with Posterior Distributions*. R package version 1.7.0.
 
-Eddelbuettel, D. and François, R. (2011). Rcpp: seamless R and C++
-integration. *Journal of Statistical Software* 40(8), 1–18.
+El Kazdadi, S. (2026). *faer: linear algebra library for Rust*. Rust crate
+version 0.24.4.
+
+Yutani, H. (2026). *savvy: a simple R extension interface using Rust*. Rust
+crate version 0.11.0.

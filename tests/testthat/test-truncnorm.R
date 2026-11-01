@@ -28,24 +28,3 @@ test_that("extreme tails are finite", {
   x <- rtn(1000, 50, 1, -Inf, 0)
   expect_true(all(is.finite(x) & x <= 0))
 })
-
-# Until the C++ engine is removed (plan/06 R5): the Rust sampler gives the
-# C++ one's draws, given the same L'Ecuyer-CMRG state and inversion normals.
-# Not bit for bit: depending on R's compiler flags, g++ may fuse
-# a + (b - a) * u into one multiply-add (seen on GitHub's Ubuntu runners),
-# which Rust never does.
-test_that("Rust and C++ truncated normal draws agree", {
-  cases <- list(c(0, 1, -Inf, Inf), c(0, 1, 0, Inf), c(0, 1, -Inf, -1), c(0, 1, -0.5, 0.7),
-                c(1, 2, 3, 3.2), c(0, 1, 6, Inf), c(0, 1, -Inf, -8), c(0, 1, 2, 9),
-                c(-3, 0.5, -10, -2.9), c(0, 1, -5, 5), c(0, 1, 1, 1))
-  for (cs in cases) {
-    s <- panelspatialprobit:::.psp_streams(7, 1)[[1]]
-    cpp <- panelspatialprobit:::.psp_with_rng_restore({
-      RNGkind("L'Ecuyer-CMRG", "Inversion")
-      assign(".Random.seed", s, envir = globalenv())
-      panelspatialprobit:::psp_rtnorm_cpp(5000, cs[1], cs[2], cs[3], cs[4])
-    })
-    rs <- panelspatialprobit:::psp_rs_rtnorm(5000L, cs[1], cs[2], cs[3], cs[4], s[-1])
-    expect_equal(rs, cpp, tolerance = 1e-14)
-  }
-})

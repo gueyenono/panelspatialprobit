@@ -50,14 +50,6 @@
   cores
 }
 
-# Which sampler engine runs a model: Rust (plan/06 R2), unless
-# options(panelspatialprobit.engine = "cpp") asks for the C++ engine (for
-# comparisons while both exist). R5 removes the C++ engine and this switch.
-.psp_engine <- function() {
-  forced <- getOption("panelspatialprobit.engine")
-  if (is.null(forced)) "rust" else match.arg(forced, c("rust", "cpp"))
-}
-
 # A fit's data for the Rust post-processing (plan/06 §6.8): the design,
 # weights, Rademacher probes (n_probes = 0: exact diagonals) and the N x Q
 # mixing variances of t errors (n_mix = 0: normal errors).

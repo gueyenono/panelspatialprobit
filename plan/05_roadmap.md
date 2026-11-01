@@ -2,6 +2,8 @@
 
 The work is split into phases, each with concrete tasks and an **exit criterion**. Sizes are relative effort (S < M < L), not calendar time. A phase starts only when the previous phase's exit criterion is met, except that Phase 4 and Phase 5 can be swapped.
 
+*Phases 0-7 were built on a C++ (RcppEigen) engine. On 2026-10-31 it was replaced by a Rust port (`06_rust_integration.md`, R0-R5), which passed the same SBC, Monte Carlo and cross-check gate (R4); "C++ engine" in the status notes below refers to that earlier version.*
+
 ## Phase 0: Project setup (S)
 
 - [x] `git init`; create the GitHub repository (decision D5: local working copy outside Google Drive). *Status: on GitHub as `gueyenono/panelspatialprobit` (remote `origin`) since 2026-10-30. The working copy is still on the Google Drive mount.*

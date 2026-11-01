@@ -37,8 +37,7 @@ NULL
   stop(class, " cannot be modified", call. = FALSE)
 }
 
-#' The cut-point updates on a toy ordered model, for `test-cutmove.R`
-#' (replaces `psp_cut_kernel_cpp`, with an explicit seed).
+#' The cut-point updates on a toy ordered model, for `test-cutmove.R`.
 #'
 #' @noRd
 `psp_rs_cut_kernel` <- function(`y`, `mu`, `z`, `kappa_free`, `n_cat`, `kmean`, `ksd`, `step`, `reps`, `ac`, `mv`, `seed`) {
@@ -192,8 +191,7 @@ NULL
   .Call(savvy_psp_rs_rng__impl, `kind`, `n`, `par`, `seed`)
 }
 
-#' Truncated normal draws, N(mean, sd^2) on `[lo, hi]` (replaces
-#' `psp_rtnorm_cpp`).
+#' Truncated normal draws, N(mean, sd^2) on `[lo, hi]`.
 #'
 #' @param n Number of draws.
 #' @param mean,sd,lo,hi Parameters and bounds (bounds may be infinite).
@@ -203,8 +201,7 @@ NULL
   .Call(savvy_psp_rs_rtnorm__impl, `n`, `mean`, `sd`, `lo`, `hi`, `seed`)
 }
 
-#' Runs the MCMC chains (replaces `psp_sampler_cpp` and `mcmapply`): chain c
-#' starts from column c of `seeds`, and up to `threads` chains run at once.
+#' Runs the MCMC chains: chain c starts from column c of `seeds`, and up to `threads` chains run at once.
 #' The draws do not depend on `threads`.
 #'
 #' @param model Data, weights and flags from `.psp_rs_model()`.
@@ -212,7 +209,8 @@ NULL
 #' @param seeds 6 x chains integer matrix of L'Ecuyer-CMRG seeds.
 #' @param threads Chains run at once.
 #' @param progress Print progress.
-#' @return A list of chains, each with the fields of the C++ engine's result.
+#' @return A list of chains, each with `draws`, `z_mean`, `alpha_mean`,
+#' `alpha_sd`, `cut_accept`, `cut_step`, `alpha_draws` and `v_mean`.
 #' @noRd
 `psp_rs_sample` <- function(`model`, `spec`, `seeds`, `threads`, `progress`) {
   .Call(savvy_psp_rs_sample__impl, `model`, `spec`, `seeds`, `threads`, `progress`)

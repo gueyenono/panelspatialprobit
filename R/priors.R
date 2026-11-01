@@ -100,8 +100,13 @@ psp_priors <- function(beta = prior_normal(0, 10), rho = prior_beta(1.01, 1.01),
 #' @param thin Thinning interval for stored draws.
 #' @param chains Number of chains.
 #' @param cores Number of chains run at once, on separate threads (on every
-#'   operating system). Results do not depend on `cores`.
-#' @param seed Optional integer seed. Results are reproducible given `seed`.
+#'   operating system, Windows included). Results do not depend on `cores`.
+#'   Under `R CMD check` (`_R_CHECK_LIMIT_CORES_`) at most 2 are used.
+#' @param seed Optional integer seed. Given `seed`, results are reproducible
+#'   on a given platform, whatever `cores` and the user's [RNGkind()]: each
+#'   chain draws from its own L'Ecuyer-CMRG stream derived from `seed`, and
+#'   the session's random number state is left unchanged. Without `seed`, one
+#'   is drawn from the session's generator (`fit$seed`).
 #' @param z_sweeps Number of Gibbs sweeps over the latent variables per
 #'   iteration.
 #' @param rho_range Admissible interval for the spatial autoregressive
@@ -123,8 +128,7 @@ psp_priors <- function(beta = prior_normal(0, 10), rho = prior_beta(1.01, 1.01),
 #' @param mixture_draws Number of simulated sets of mixing variances over
 #'   which probabilities and impacts are averaged for Student-t errors
 #'   ([psp_t()]).
-#' @param progress Logical; print sampling progress (only when chains run
-#'   sequentially, i.e. `cores = 1`).
+#' @param progress Logical; print sampling progress, for each chain.
 #' @section Parallel post-processing:
 #' [psp_impacts()], [predict()][predict.psprobit], [psp_ppc()],
 #' [psp_response_path()], [psp_loglik()], `logLik()` and [psp_dic()] work

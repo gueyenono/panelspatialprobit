@@ -192,34 +192,28 @@ psoprobit <- function(formula, data, index, W, model = c("sar", "sdm", "slx", "s
   seed <- control$seed
   if (is.null(seed)) seed <- sample.int(.Machine$integer.max, 1)
   streams <- .psp_streams(seed, control$chains)
-  if (.psp_engine() == "rust") {
-    spec <- list(
-      beta_mean = as.double(bm), beta_prec = as.double(diag(1 / bs^2, k)),
-      rho = list(a = priors$rho$a, b = priors$rho$b, min = rr[1], max = rr[2],
-                 grid = as.double(ld$grid), lndet = as.double(ld$lndet)),
-      lambda = list(a = priors$lambda$a, b = priors$lambda$b, min = lr[1], max = lr[2],
-                    grid = as.double(ld_M$grid), lndet = as.double(ld_M$lndet)),
-      phi_a = priors$phi$a, phi_b = priors$phi$b,
-      nu = if (errors$type == "t") as.double(errors$df) else 0,
-      sigma = list(family = sigma_prior, p1 = as.double(sigma_p[1]), p2 = as.double(sigma_p[2])),
-      kappa_flat = kp$family == "flat",
-      kappa_mean = if (kp$family == "flat") 0 else as.double(kp$mean),
-      kappa_sd = if (kp$family == "flat") 1 else as.double(kp$sd),
-      iter = as.integer(control$iter), warmup = as.integer(control$warmup),
-      thin = as.integer(control$thin), z_sweeps = as.integer(control$z_sweeps),
-      cut_sampler = if (control$cutpoint_sampler == "transform") 0L else 1L,
-      scale_move = isTRUE(control$scale_move),
-      beta_start = numeric(k), rho_start = 0, lambda_start = 0, sigma2_start = 1,
-      kappa_start = as.double(kappa_start), alpha_every = as.integer(alpha_every))
-    model_rs <- .psp_rs_model(design, y_c, ordered, has_rho, has_lambda, has_re, spatial_re)
-    seeds <- vapply(streams, function(s) s[-1], integer(6))
-    out <- psp_rs_sample(model_rs, spec, seeds, .psp_threads(control$cores),
-                         isTRUE(control$progress))
-  } else {
-    out <- .psp_run_cpp(design, y_c, X, k, J, ordered, has_rho, has_lambda, has_re,
-                        spatial_re, bm, bs, priors, rr, lr, ld, ld_M, errors, sigma_prior,
-                        sigma_p, kp, control, kappa_start, alpha_every, streams)
-  }
+  spec <- list(
+    beta_mean = as.double(bm), beta_prec = as.double(diag(1 / bs^2, k)),
+    rho = list(a = priors$rho$a, b = priors$rho$b, min = rr[1], max = rr[2],
+               grid = as.double(ld$grid), lndet = as.double(ld$lndet)),
+    lambda = list(a = priors$lambda$a, b = priors$lambda$b, min = lr[1], max = lr[2],
+                  grid = as.double(ld_M$grid), lndet = as.double(ld_M$lndet)),
+    phi_a = priors$phi$a, phi_b = priors$phi$b,
+    nu = if (errors$type == "t") as.double(errors$df) else 0,
+    sigma = list(family = sigma_prior, p1 = as.double(sigma_p[1]), p2 = as.double(sigma_p[2])),
+    kappa_flat = kp$family == "flat",
+    kappa_mean = if (kp$family == "flat") 0 else as.double(kp$mean),
+    kappa_sd = if (kp$family == "flat") 1 else as.double(kp$sd),
+    iter = as.integer(control$iter), warmup = as.integer(control$warmup),
+    thin = as.integer(control$thin), z_sweeps = as.integer(control$z_sweeps),
+    cut_sampler = if (control$cutpoint_sampler == "transform") 0L else 1L,
+    scale_move = isTRUE(control$scale_move),
+    beta_start = numeric(k), rho_start = 0, lambda_start = 0, sigma2_start = 1,
+    kappa_start = as.double(kappa_start), alpha_every = as.integer(alpha_every))
+  model_rs <- .psp_rs_model(design, y_c, ordered, has_rho, has_lambda, has_re, spatial_re)
+  seeds <- vapply(streams, function(s) s[-1], integer(6))
+  out <- psp_rs_sample(model_rs, spec, seeds, .psp_threads(control$cores),
+                       isTRUE(control$progress))
 
   pnames <- c(colnames(X), if (has_rho) "rho", if (has_lambda) "lambda",
               if (has_re) "sigma_alpha", if (spatial_re) "phi",
@@ -264,47 +258,6 @@ psoprobit <- function(formula, data, index, W, model = c("sar", "sdm", "slx", "s
   fit
 }
 
-# The C++ engine, one psp_sampler_cpp() call per chain, for the variants not
-# yet ported to Rust (plan/06 R2; removed in R5).
-.psp_run_cpp <- function(design, y_c, X, k, J, ordered, has_rho, has_lambda, has_re,
-                         spatial_re, bm, bs, priors, rr, lr, ld, ld_M, errors, sigma_prior,
-                         sigma_p, kp, control, kappa_start, alpha_every, streams) {
-  parallel_run <- control$cores > 1 && .Platform$OS.type == "unix"
-  run_chain <- function(stream, chain) {
-    .psp_with_stream(stream, psp_sampler_cpp(
-      y = y_c, X = X, W_list = .psp_as_list(design$W),
-      M_list = .psp_as_list(if (has_lambda) design$M else design$W), N = design$N,
-      T = design$T, J = J, ordered = ordered, has_rho = has_rho, has_lambda = has_lambda,
-      has_re = has_re, spatial_re = spatial_re, beta_mean = bm,
-      beta_prec = diag(1 / bs^2, k), rho_a = priors$rho$a, rho_b = priors$rho$b,
-      rmin = rr[1], rmax = rr[2], rho_grid = ld$grid, lndet_grid = ld$lndet,
-      lam_a = priors$lambda$a, lam_b = priors$lambda$b, lmin = lr[1], lmax = lr[2],
-      lam_grid = ld_M$grid, lndetM_grid = ld_M$lndet, phi_a = priors$phi$a,
-      phi_b = priors$phi$b, nu = if (errors$type == "t") errors$df else 0,
-      lag_col = if ("lag_z" %in% colnames(X)) match("lag_z", colnames(X)) - 1L else -1L,
-      sigma_prior = sigma_prior, sigma_p1 = sigma_p[1], sigma_p2 = sigma_p[2],
-      kappa_flat = kp$family == "flat",
-      kappa_mean = if (kp$family == "flat") 0 else kp$mean,
-      kappa_sd = if (kp$family == "flat") 1 else kp$sd,
-      iter = control$iter, warmup = control$warmup, thin = control$thin,
-      z_sweeps = control$z_sweeps,
-      cut_sampler = if (control$cutpoint_sampler == "transform") 0L else 1L,
-      scale_move = control$scale_move,
-      beta_start = numeric(k), rho_start = 0, lambda_start = 0, sigma2_start = 1,
-      kappa_start = kappa_start, alpha_every = alpha_every,
-      progress = control$progress && !parallel_run, chain = chain))
-  }
-  if (parallel_run) {
-    out <- parallel::mcmapply(run_chain, streams, seq_along(streams), SIMPLIFY = FALSE,
-                              mc.cores = control$cores)
-    failed <- vapply(out, inherits, logical(1), "try-error")
-    if (any(failed)) stop("A chain failed: ", out[[which(failed)[1]]], call. = FALSE)
-    out
-  } else {
-    Map(run_chain, streams, seq_along(streams))
-  }
-}
-
 # Independent L'Ecuyer-CMRG streams so results do not depend on 'cores'.
 .psp_streams <- function(seed, n) {
   .psp_with_rng_restore({
@@ -317,13 +270,6 @@ psoprobit <- function(formula, data, index, W, model = c("sar", "sdm", "slx", "s
       s <- parallel::nextRNGStream(s)
     }
     streams
-  })
-}
-
-.psp_with_stream <- function(stream, expr) {
-  .psp_with_rng_restore({
-    assign(".Random.seed", stream, envir = globalenv())
-    expr
   })
 }
 

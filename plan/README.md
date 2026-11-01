@@ -50,7 +50,7 @@ Each decision has a recommendation; the plan assumes the recommended option unle
 |---|---|---|---|
 | D1 | Function names | `psprobit()` (binary) + `psoprobit()` (ordered), sharing one engine | A single `spprobit_panel(family = )`; or `panel_sprobit()` / `panel_soprobit()` |
 | D2 | License | GPL (≥ 3): compatible with porting from `spatialprobit`, `ProbitSpatial` and `spmixW` | GPL (≥ 2) (no porting from `spmixW`); MIT (clean-room only) |
-| D3 | C++ backend | `RcppEigen` (zero-copy `dgCMatrix`, sparse LU and Cholesky; also used by `ProbitSpatial`) | `RcppArmadillo` (weaker sparse solvers) |
+| D3 | C++ backend | `RcppEigen` (zero-copy `dgCMatrix`, sparse LU and Cholesky; also used by `ProbitSpatial`). *Superseded 2026-10-31: the engine is Rust (`06`, R-D1).* | `RcppArmadillo` (weaker sparse solvers) |
 | D4 | Diagnostics dependency | `posterior` in Imports (rank-normalised $\hat R$, ESS) | Suggests + own minimal $\hat R$/ESS |
 | D5 | Repository location | Local disk + GitHub remote; keep Drive for papers only | Stay in Google Drive (risk of sync and lock issues during compilation) |
 | D6 | Fixed effects | Not offered; CRE (Mundlak/Chamberlain) instead, with documentation on why | Offer with an incidental-parameters warning for large $T$ |

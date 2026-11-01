@@ -1,4 +1,4 @@
-# Distributional agreement between the C++ engine and the pure-R oracle,
+# Distributional agreement between the Rust engine and the pure-R oracle,
 # which uses a different latent update and a Metropolis step for rho.
 compare_to_reference <- function(s, ordered = FALSE, J = 2L, model = "sar", effects = "random",
                                  df = NULL, latent = FALSE) {
@@ -32,17 +32,17 @@ compare_to_reference <- function(s, ordered = FALSE, J = 2L, model = "sar", effe
   expect_true(all(abs(z) < 4), info = paste(m1$variable, round(z, 2), collapse = "; "))
 }
 
-test_that("C++ sampler agrees with the R reference sampler (binary SAR, RE)", {
+test_that("Sampler agrees with the R reference sampler (binary SAR, RE)", {
   skip_on_cran()
   compare_to_reference(small_data(seed = 4, T = 4))
 })
 
-test_that("C++ sampler agrees with the R reference sampler (ordered SAR, RE)", {
+test_that("Sampler agrees with the R reference sampler (ordered SAR, RE)", {
   skip_on_cran()
   compare_to_reference(small_data(seed = 5, T = 4, cutpoints = 0.8), ordered = TRUE)
 })
 
-test_that("C++ sampler agrees with the R reference sampler (binary SEM and SARAR, RE)", {
+test_that("Sampler agrees with the R reference sampler (binary SEM and SARAR, RE)", {
   skip_on_cran()
   W <- psp_weights(rook_weights(4, 4), style = "W")
   d <- sim_psprobit(W, T = 4, beta = c(0, 1, -0.5), rho = 0, lambda = 0.5,
@@ -53,13 +53,13 @@ test_that("C++ sampler agrees with the R reference sampler (binary SEM and SARAR
   compare_to_reference(list(d = d, W = W), model = "sarar")
 })
 
-test_that("C++ sampler agrees with the R reference sampler (time-varying W)", {
+test_that("Sampler agrees with the R reference sampler (time-varying W)", {
   skip_on_cran()
   compare_to_reference(tv_data(seed = 10, T = 4))
   compare_to_reference(tv_data(seed = 11, T = 4, rho = 0.3, lambda = -0.4), model = "sarar")
 })
 
-test_that("C++ sampler agrees with the R reference sampler (spatial random effects)", {
+test_that("Sampler agrees with the R reference sampler (spatial random effects)", {
   skip_on_cran()
   W <- psp_weights(rook_weights(4, 4), style = "W")
   d <- sim_psprobit(W, T = 4, beta = c(0, 1, -0.5), rho = 0.3, sigma_alpha = 0.8, phi = 0.5,
@@ -70,7 +70,7 @@ test_that("C++ sampler agrees with the R reference sampler (spatial random effec
   compare_to_reference(list(d = d, W = W), model = "sem", effects = "spatial_random")
 })
 
-test_that("C++ sampler agrees with the R reference sampler (Student-t errors)", {
+test_that("Sampler agrees with the R reference sampler (Student-t errors)", {
   skip_on_cran()
   W <- psp_weights(rook_weights(4, 4), style = "W")
   d <- sim_psprobit(W, T = 4, beta = c(0, 1, -0.5), rho = 0.4, sigma_alpha = 0.5, df = 4,
@@ -81,7 +81,7 @@ test_that("C++ sampler agrees with the R reference sampler (Student-t errors)", 
   compare_to_reference(list(d = d, W = W), ordered = TRUE, model = "sarar", df = 4)
 })
 
-test_that("C++ sampler agrees with the R reference sampler (latent AR(1))", {
+test_that("Sampler agrees with the R reference sampler (latent AR(1))", {
   skip_on_cran()
   W <- psp_weights(rook_weights(4, 4), style = "W")
   d <- sim_psprobit(W, T = 4, beta = c(0, 1, -0.5), rho = 0.3, sigma_alpha = 0.5,

@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R4 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R5 next. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R4 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; work continues on branch `rust`); R5 under way (C++ removed, docs updated; GitHub Actions and the merge into `master` pending). Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -528,8 +528,8 @@ One step per row, in the order to do them.
 | 35 | R4 | Full SBC for every variant, with replication runs for marginal results *Done 2026-10-31: 30 variants x 500, replications for 17; see "R4 results" below.* | 34 | Claude |
 | 36 | R4 | Monte Carlo, `spatialprobit` cross-checks, Wang and Kockelman subset, benchmarks (alongside 35) *Done 2026-10-31 (the full Wang and Kockelman grid).* | 34 | Claude |
 | 37 | R4 | `vignette_data.R`; compare the vignette numbers with the C++ ones and explain any change; R4 exit *Done 2026-10-31: R4 exit met.* | 35, 36 | Claude |
-| 38 | R5 | Delete the C++ files; drop Rcpp and RcppEigen from DESCRIPTION and NAMESPACE; archive the `validation/rust_port/` results | 37 | Claude |
-| 39 | R5 | Update the documentation listed under R5 | 38 | Claude |
+| 38 | R5 | Delete the C++ files; drop Rcpp and RcppEigen from DESCRIPTION and NAMESPACE; archive the `validation/rust_port/` results *Done 2026-10-31 (`validation/rust_port/README.md` marks `compare_sampler.R` historical).* | 37 | Claude |
+| 39 | R5 | Update the documentation listed under R5 *Done 2026-10-31.* | 38 | Claude |
 | 40 | R5 | Push; GitHub Actions clean on the three OSes (R5 exit) | 39 | You, or Claude when asked |
 | 41 | R5 | Merge `rust` into `master` | 40 | You, or Claude when asked |
 | 42 | after R5 | R6 optimisations, one at a time, each gated by ESS per second, the reference tests and SBC | 41 | Claude |
@@ -659,9 +659,9 @@ Steps 35-37.
 
 Steps 38-41.
 
-- [ ] Delete `src/sampler.cpp`, `src/ghk.cpp`, `src/truncnorm.h`, `src/RcppExports.cpp`, `R/RcppExports.R` and `src/registration.c`, and the `OBJECTS` line in both Makevars templates; update DESCRIPTION and NAMESPACE.
-- [ ] Archive `validation/rust_port/` results (keep the scripts, mark them historical).
-- [ ] Update the docs:
+- [x] Delete `src/sampler.cpp`, `src/ghk.cpp`, `src/truncnorm.h`, `src/RcppExports.cpp`, `R/RcppExports.R` and `src/registration.c`, and the `OBJECTS` line in both Makevars templates; update DESCRIPTION and NAMESPACE.
+- [x] Archive `validation/rust_port/` results (keep the scripts, mark them historical).
+- [x] Update the docs:
   - NEWS (behaviour changes in §6.6);
   - README (installing from source needs Rust);
   - `?psp_control` (`cores` on Windows, threads, the reproducibility contract);

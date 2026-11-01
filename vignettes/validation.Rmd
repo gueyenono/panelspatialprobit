@@ -41,7 +41,7 @@ uses different algorithms: dense precision matrices instead of the sparse
 residual updates, random-walk Metropolis steps with exact log-determinants for
 $\rho$, $\lambda$, $\phi$ and the latent AR coefficient instead of griddy
 Gibbs steps, and no scale or cut-point moves. It shares no sampling code with
-the C++ engine. The test suite runs both on the same small data sets (SAR,
+the Rust engine. The test suite runs both on the same small data sets (SAR,
 SEM, SARAR, spatial random effects, Student-t errors, time-varying weights,
 latent dynamics, binary and ordered) and requires every posterior mean to agree
 within four Monte Carlo standard errors. A mistake in one sampler

@@ -38,12 +38,8 @@ Imports:
     methods,
     parallel,
     posterior,
-    Rcpp,
     stats,
     utils
-LinkingTo:
-    Rcpp,
-    RcppEigen
 Suggests:
     knitr,
     mvtnorm,

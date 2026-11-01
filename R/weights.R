@@ -104,8 +104,6 @@ rook_weights <- function(nrow, ncol) {
 # Weights of period t (a single matrix serves every period)
 .psp_Wt <- function(W, t) if (is.list(W)) W[[t]] else W
 
-.psp_as_list <- function(W) if (is.list(W)) W else list(W)
-
 # Log-determinant grid averaged over periods, so that T * lndet is the sum of
 # the per-period log-determinants; distinct matrices are computed once.
 .psp_lndet_avg <- function(W, rmin, rmax, method) {
