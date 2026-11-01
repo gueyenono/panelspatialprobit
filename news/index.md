@@ -29,10 +29,10 @@
       [`psp_weights()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_weights.md)
       and
       [`rook_weights()`](https://gueyenono.github.io/panelspatialprobit/reference/rook_weights.md).
-  - Engine: a C++ sampler with residual-update latent sweeps, a
-    collapsed griddy Gibbs step for rho, a half-Cauchy random-effects
-    prior, a transformation move for the cut-points and a
-    generalised-Gibbs scale move.
+  - Engine: a sampler with residual-update latent sweeps, a collapsed
+    griddy Gibbs step for rho, a half-Cauchy random-effects prior, a
+    transformation move for the cut-points and a generalised-Gibbs scale
+    move.
 - Completion of phases 2-3:
   - Chamberlain correlated random effects:
     `cre = list(type = "chamberlain", vars = ~ x1)`.
@@ -113,3 +113,32 @@
   written by `validation/vignette_data.R`).
 - [`summary()`](https://rdrr.io/r/base/summary.html) prints effective
   sample sizes as whole numbers.
+- The engine is written in Rust (it was C++ with RcppEigen). Installing
+  from source needs Cargo and rustc \>= 1.84 (<https://rustup.rs>).
+  Changes:
+  - Chains run in parallel threads on every operating system, Windows
+    included (`psp_control(cores = )`); the draws do not depend on
+    `cores`.
+  - [`psp_impacts()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_impacts.md),
+    [`predict()`](https://rdrr.io/r/stats/predict.html),
+    [`psp_ppc()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_ppc.md),
+    [`psp_response_path()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_response_path.md)
+    and
+    [`psp_loglik()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)
+    run in Rust (1.3 to 18 times faster on one core) and in parallel
+    over the workers of
+    [`future::plan()`](https://future.futureverse.org/reference/plan.html)
+    (see
+    [`?psp_control`](https://gueyenono.github.io/panelspatialprobit/reference/psp_control.md));
+    their results do not depend on the plan.
+  - The sampler always uses inversion normals, whatever
+    `RNGkind(normal.kind = )` says.
+  - For the same seed,
+    [`psp_ppc()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_ppc.md),
+    [`psp_response_path()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_response_path.md)
+    and
+    [`psp_loglik()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)
+    give different (still reproducible) numbers, as they now draw from
+    package streams rather than R’s generator. Models with SEM, SDEM or
+    SARAR random effects, or spatial random effects, give different
+    draws; the others give the same draws as before.

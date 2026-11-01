@@ -83,6 +83,11 @@ log-likelihood at the posterior mean of the parameters, so
 the deviance information criterion (Spiegelhalter et al. 2002) from the
 marginal likelihood.
 
+The posterior draws are processed in parallel under the user's
+[`future::plan()`](https://future.futureverse.org/reference/plan.html)
+(see "Parallel post-processing" in
+[`psp_control()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_control.md)).
+
 ## References
 
 Geweke, J. (1991). Efficient simulation from the multivariate normal and
@@ -103,20 +108,21 @@ fit <- psprobit(y ~ x1, data = d, index = c("id", "time"), W = W, impacts = FALS
                 control = psp_control(iter = 200, warmup = 100, chains = 1, seed = 2))
 #> Warning: Possible convergence problems (R-hat > 1.01 or bulk ESS < 100) for: (Intercept), x1, rho, sigma_alpha. Consider more iterations.
 logLik(fit, reps = 200)
-#> Warning: The GHK estimates are unreliable (Monte Carlo se up to 0.97 on the log scale): increase 'reps'. GHK needs many replications for large N x T.
-#> 'log Lik.' -29.36441 (df=4)
+#> Warning: The GHK estimates are unreliable (Monte Carlo se up to 0.94 on the log scale): increase 'reps'. GHK needs many replications for large N x T.
+#> 'log Lik.' -36.6207 (df=4)
 psp_dic(fit, draws = 20, reps = 100)
 #> Warning: The GHK estimates are unreliable (Monte Carlo se up to 1.00 on the log scale): increase 'reps'. GHK needs many replications for large N x T.
+#> Warning: Negative p_D: the GHK error dominates; increase 'reps'.
 #> $dic
-#> [1] 73.76084
+#> [1] 53.78186
 #> 
 #> $p_d
-#> [1] 3.777308
+#> [1] -18.66173
 #> 
 #> $d_bar
-#> [1] 69.98353
+#> [1] 72.44359
 #> 
 #> $d_hat
-#> [1] 66.20622
+#> [1] 91.10532
 #> 
 ```

@@ -157,23 +157,25 @@ and fit a spatial Durbin model:</p>
 <span>                  sigma_alpha <span class="op">=</span> <span class="fl">0.7</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/psprobit.html">psprobit</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">d</span>, index <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"time"</span><span class="op">)</span>, W <span class="op">=</span> <span class="va">W</span>,</span>
 <span>                model <span class="op">=</span> <span class="st">"sdm"</span>, control <span class="op">=</span> <span class="va">ctrl</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning: Possible convergence problems (R-hat &gt; 1.01 or bulk ESS &lt; 200) for:</span></span>
+<span><span class="co">#&gt; rho. Consider more iterations.</span></span>
 <span><span class="va">fit</span><span class="op">$</span><span class="va">impacts</span></span>
 <span><span class="co">#&gt; Impacts on P(y = 1) (posterior mean, sd, 95% interval; 500 draws)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.1876 0.0201  0.1470  0.2238</span></span>
-<span><span class="co">#&gt; x2 -0.1407 0.0200 -0.1766 -0.1032</span></span>
+<span><span class="co">#&gt; x1  0.1883 0.0201  0.1480  0.2265</span></span>
+<span><span class="co">#&gt; x2 -0.1413 0.0202 -0.1814 -0.1029</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.2918 0.0574  0.1731 0.4065</span></span>
-<span><span class="co">#&gt; x2 -0.0707 0.0532 -0.1692 0.0367</span></span>
+<span><span class="co">#&gt; x1  0.2874 0.0581  0.1738 0.4018</span></span>
+<span><span class="co">#&gt; x2 -0.0725 0.0538 -0.1741 0.0329</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.4794 0.0577  0.3688  0.5914</span></span>
-<span><span class="co">#&gt; x2 -0.2114 0.0596 -0.3306 -0.1002</span></span></code></pre></div>
+<span><span class="co">#&gt; x1  0.4757 0.0588  0.3562  0.5913</span></span>
+<span><span class="co">#&gt; x2 -0.2138 0.0611 -0.3295 -0.0939</span></span></code></pre></div>
 <p>The spillover of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mn>1</mn></msub><annotation encoding="application/x-tex">x_1</annotation></semantics></math>
 is larger than its direct effect: its own Durbin term adds to the
@@ -262,8 +264,8 @@ The SEM’s indirect impacts are therefore exactly zero:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.1880 0.0267  0.1373  0.2378</span></span>
-<span><span class="co">#&gt; x2 -0.1492 0.0219 -0.1910 -0.1038</span></span>
+<span><span class="co">#&gt; x1  0.1888 0.0272  0.1305  0.2365</span></span>
+<span><span class="co">#&gt; x2 -0.1497 0.0227 -0.1955 -0.1055</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
 <span><span class="co">#&gt;    mean sd q2.5 q97.5</span></span>
@@ -272,8 +274,8 @@ The SEM’s indirect impacts are therefore exactly zero:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.1880 0.0267  0.1373  0.2378</span></span>
-<span><span class="co">#&gt; x2 -0.1492 0.0219 -0.1910 -0.1038</span></span></code></pre></div>
+<span><span class="co">#&gt; x1  0.1888 0.0272  0.1305  0.2365</span></span>
+<span><span class="co">#&gt; x2 -0.1497 0.0227 -0.1955 -0.1055</span></span></code></pre></div>
 <p>Here the SEM is the wrong model: it attributes the spillover of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mn>1</mn></msub><annotation encoding="application/x-tex">x_1</annotation></semantics></math>
 to nothing, and its direct impacts are close to the SDM’s. With real
@@ -304,18 +306,18 @@ comparison with published results:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.2151 0.0222  0.1701  0.2532</span></span>
-<span><span class="co">#&gt; x2 -0.1613 0.0221 -0.2040 -0.1182</span></span>
+<span><span class="co">#&gt; x1  0.2160 0.0223  0.1709  0.2584</span></span>
+<span><span class="co">#&gt; x2 -0.1621 0.0219 -0.2074 -0.1221</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.3352 0.0684  0.1989 0.4751</span></span>
-<span><span class="co">#&gt; x2 -0.0809 0.0611 -0.1898 0.0440</span></span>
+<span><span class="co">#&gt; x1  0.3305 0.0696  0.2022 0.4781</span></span>
+<span><span class="co">#&gt; x2 -0.0828 0.0616 -0.1979 0.0388</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.5503 0.0694  0.4245  0.6896</span></span>
-<span><span class="co">#&gt; x2 -0.2422 0.0677 -0.3815 -0.1130</span></span></code></pre></div>
+<span><span class="co">#&gt; x1  0.5464 0.0713  0.4161  0.6909</span></span>
+<span><span class="co">#&gt; x2 -0.2449 0.0685 -0.3750 -0.1120</span></span></code></pre></div>
 <p>The impacts are larger, because they ignore the extra variance. The
 default (<code>"reduced_form"</code>) gives the derivatives of the
 probabilities the model actually implies; we recommend it for
@@ -338,19 +340,19 @@ These are the impacts for the units in the sample:</p>
 <span><span class="co">#&gt; Unit-specific (conditional on the random effects)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; direct:</span></span>
-<span><span class="co">#&gt;       mean     sd   q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.1983 0.0211  0.155  0.2384</span></span>
-<span><span class="co">#&gt; x2 -0.1509 0.0226 -0.191 -0.1004</span></span>
+<span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
+<span><span class="co">#&gt; x1  0.1968 0.0206  0.1574  0.2376</span></span>
+<span><span class="co">#&gt; x2 -0.1463 0.0222 -0.1881 -0.1003</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; indirect:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5  q97.5</span></span>
-<span><span class="co">#&gt; x1  0.3014 0.0643  0.1748 0.4324</span></span>
-<span><span class="co">#&gt; x2 -0.0736 0.0564 -0.1849 0.0339</span></span>
+<span><span class="co">#&gt; x1  0.3108 0.0650  0.1865 0.4418</span></span>
+<span><span class="co">#&gt; x2 -0.0750 0.0545 -0.1702 0.0451</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; total:</span></span>
 <span><span class="co">#&gt;       mean     sd    q2.5   q97.5</span></span>
-<span><span class="co">#&gt; x1  0.4996 0.0641  0.3732  0.6347</span></span>
-<span><span class="co">#&gt; x2 -0.2245 0.0642 -0.3421 -0.1015</span></span></code></pre></div>
+<span><span class="co">#&gt; x1  0.5076 0.0663  0.3632  0.6382</span></span>
+<span><span class="co">#&gt; x2 -0.2214 0.0646 -0.3334 -0.0827</span></span></code></pre></div>
 <p>Unit impacts are larger than population impacts. A unit with a known
 random effect has less latent uncertainty left, so its probability
 responds more sharply. Averaging over the random effects flattens the
@@ -369,7 +371,7 @@ that is spillover:</p>
 <span><span class="va">share</span> <span class="op">&lt;-</span> <span class="va">dr</span><span class="op">[</span>, <span class="st">"x1"</span>, <span class="fl">1</span>, <span class="st">"indirect"</span><span class="op">]</span> <span class="op">/</span> <span class="va">dr</span><span class="op">[</span>, <span class="st">"x1"</span>, <span class="fl">1</span>, <span class="st">"total"</span><span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">share</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.5</span>, <span class="fl">0.95</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;        5%       50%       95% </span></span>
-<span><span class="co">#&gt; 0.5081829 0.6107099 0.6926877</span></span></code></pre></div>
+<span><span class="co">#&gt; 0.4976683 0.6036779 0.6879632</span></span></code></pre></div>
 <p><code>summary(imp)</code> returns the table as a data frame, one row
 per variable, category and effect (and period with
 <code>by_period = TRUE</code>).</p>
@@ -397,7 +399,7 @@ new regressor values:</p>
 <code class="sourceCode R"><span><span class="va">d_up</span> <span class="op">&lt;-</span> <span class="va">d</span></span>
 <span><span class="va">d_up</span><span class="op">$</span><span class="va">x1</span> <span class="op">&lt;-</span> <span class="va">d_up</span><span class="op">$</span><span class="va">x1</span> <span class="op">+</span> <span class="fl">1</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">fit</span>, newdata <span class="op">=</span> <span class="va">d_up</span><span class="op">)</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.4275649</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.4231255</span></span></code></pre></div>
 <p>The average change in probability is close to the total impact of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mn>1</mn></msub><annotation encoding="application/x-tex">x_1</annotation></semantics></math>
 above, but smaller: probabilities are bounded, and the normal curve

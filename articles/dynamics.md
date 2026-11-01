@@ -71,9 +71,9 @@ fit <- psprobit(y ~ x1 + x2, data = d, index = c("id", "time"), W = W,
 #> sigma_alpha. Consider more iterations.
 round(coef(fit), 2)
 #> (Intercept)          x1          x2       lag_y      init_y     mean_x1 
-#>       -0.59        0.74       -0.84        0.80        0.45        0.35 
+#>       -0.58        0.73       -0.85        0.79        0.44        0.37 
 #>     mean_x2         rho sigma_alpha 
-#>        0.48        0.37        0.35
+#>        0.49        0.37        0.36
 ```
 
 The warning concerns $`\sigma_\alpha`$, which the Wooldridge terms leave
@@ -124,13 +124,13 @@ psp_response_path(fit, "x1", draws = 100, nsim = 10, seed = 1)
 #> 
 #> Average change over all units:
 #>  horizon period   mean     sd   q2.5  q97.5
-#>        0      2 0.2443 0.0313 0.1896 0.3052
-#>        1      3 0.0757 0.0232 0.0348 0.1247
-#>        2      4 0.0233 0.0128 0.0053 0.0569
-#>        3      5 0.0081 0.0062 0.0009 0.0263
-#>        4      6 0.0030 0.0030 0.0000 0.0092
-#>        5      7 0.0010 0.0015 0.0000 0.0050
-#>        6      8 0.0004 0.0006 0.0000 0.0022
+#>        0      2 0.2520 0.0452 0.1727 0.3409
+#>        1      3 0.0751 0.0264 0.0305 0.1283
+#>        2      4 0.0214 0.0126 0.0039 0.0509
+#>        3      5 0.0072 0.0062 0.0004 0.0191
+#>        4      6 0.0025 0.0032 0.0000 0.0113
+#>        5      7 0.0009 0.0015 0.0000 0.0051
+#>        6      8 0.0004 0.0009 0.0000 0.0026
 ```
 
 Horizon 0 is the short-run total impact. The later horizons come only
@@ -151,33 +151,33 @@ psp_response_path(fit, "x1", type = "permanent", units = c("1", "2", "3"),
 #> 
 #> Average change over all units:
 #>  horizon period   mean     sd   q2.5  q97.5
-#>        0      2 0.0116 0.0026 0.0071 0.0170
-#>        1      3 0.0156 0.0031 0.0097 0.0218
-#>        2      4 0.0155 0.0032 0.0097 0.0210
-#>        3      5 0.0225 0.0043 0.0141 0.0298
-#>        4      6 0.0232 0.0049 0.0139 0.0326
-#>        5      7 0.0216 0.0054 0.0121 0.0325
-#>        6      8 0.0143 0.0040 0.0067 0.0217
+#>        0      2 0.0122 0.0030 0.0076 0.0188
+#>        1      3 0.0160 0.0040 0.0089 0.0237
+#>        2      4 0.0152 0.0038 0.0083 0.0225
+#>        3      5 0.0226 0.0055 0.0122 0.0331
+#>        4      6 0.0231 0.0058 0.0140 0.0348
+#>        5      7 0.0211 0.0065 0.0112 0.0345
+#>        6      8 0.0145 0.0055 0.0068 0.0270
 #> 
 #> Average change over the shocked units:
 #>  horizon period   mean     sd   q2.5  q97.5
-#>        0      2 0.1539 0.0398 0.0866 0.2363
-#>        1      3 0.1885 0.0372 0.1253 0.2697
-#>        2      4 0.1928 0.0430 0.1164 0.2743
-#>        3      5 0.3034 0.0600 0.1810 0.4120
-#>        4      6 0.2947 0.0600 0.1679 0.4113
-#>        5      7 0.2566 0.0657 0.1284 0.3749
-#>        6      8 0.1653 0.0526 0.0591 0.2590
+#>        0      2 0.1613 0.0382 0.0982 0.2352
+#>        1      3 0.1939 0.0463 0.1108 0.2741
+#>        2      4 0.1934 0.0503 0.1014 0.2877
+#>        3      5 0.3041 0.0708 0.1576 0.4283
+#>        4      6 0.2932 0.0681 0.1630 0.4384
+#>        5      7 0.2519 0.0764 0.1208 0.4183
+#>        6      8 0.1659 0.0689 0.0530 0.3221
 #> 
 #> Average change over the other units:
 #>  horizon period   mean     sd   q2.5  q97.5
-#>        0      2 0.0024 0.0008 0.0012 0.0040
-#>        1      3 0.0043 0.0017 0.0016 0.0082
-#>        2      4 0.0039 0.0017 0.0015 0.0077
-#>        3      5 0.0042 0.0018 0.0016 0.0090
-#>        4      6 0.0055 0.0023 0.0024 0.0106
-#>        5      7 0.0063 0.0028 0.0026 0.0113
-#>        6      8 0.0044 0.0022 0.0015 0.0106
+#>        0      2 0.0025 0.0012 0.0008 0.0053
+#>        1      3 0.0044 0.0020 0.0014 0.0099
+#>        2      4 0.0036 0.0018 0.0013 0.0074
+#>        3      5 0.0043 0.0022 0.0015 0.0094
+#>        4      6 0.0055 0.0026 0.0017 0.0115
+#>        5      7 0.0061 0.0031 0.0022 0.0148
+#>        6      8 0.0046 0.0029 0.0012 0.0117
 ```
 
 For the changed units the effect grows over the first periods as the
@@ -218,7 +218,7 @@ fit_lat <- psprobit(y ~ x1 + x2, data = d_lat, index = c("id", "time"), W = W,
                                           chains = 2, seed = 4, progress = FALSE))
 round(coef(fit_lat), 2)
 #> (Intercept)          x1          x2       lag_z         rho sigma_alpha 
-#>       -0.34        1.12       -0.94        0.51        0.27        0.87
+#>       -0.34        1.12       -0.94        0.50        0.27        0.87
 ```
 
 The sampler updates the latent outcomes given $`\gamma`$ and $`\gamma`$
@@ -267,28 +267,28 @@ fit_static_pooled <- psprobit(y ~ x1 + x2, data = d_est, index = c("id", "time")
                               effects = "pooled", impacts = FALSE, control = ctrl)
 persistence(fit)
 #>             observed replicated  ppp
-#> persist t=3     0.57       0.60 0.72
-#> persist t=4     0.59       0.54 0.24
-#> persist t=5     0.65       0.59 0.18
-#> persist t=6     0.63       0.58 0.28
-#> persist t=7     0.63       0.58 0.28
-#> persist t=8     0.69       0.63 0.22
+#> persist t=3     0.57       0.61 0.78
+#> persist t=4     0.59       0.54 0.32
+#> persist t=5     0.65       0.60 0.28
+#> persist t=6     0.63       0.58 0.30
+#> persist t=7     0.63       0.59 0.34
+#> persist t=8     0.69       0.63 0.23
 persistence(fit_static)
 #>             observed replicated  ppp
-#> persist t=3     0.57       0.59 0.64
-#> persist t=4     0.59       0.55 0.28
-#> persist t=5     0.65       0.57 0.16
-#> persist t=6     0.63       0.58 0.25
+#> persist t=3     0.57       0.60 0.73
+#> persist t=4     0.59       0.55 0.33
+#> persist t=5     0.65       0.57 0.15
+#> persist t=6     0.63       0.58 0.28
 #> persist t=7     0.63       0.58 0.26
-#> persist t=8     0.69       0.60 0.15
+#> persist t=8     0.69       0.59 0.06
 persistence(fit_static_pooled)
 #>             observed replicated  ppp
-#> persist t=3     0.57       0.52 0.25
-#> persist t=4     0.59       0.50 0.12
+#> persist t=3     0.57       0.52 0.29
+#> persist t=4     0.59       0.51 0.16
 #> persist t=5     0.65       0.53 0.04
 #> persist t=6     0.63       0.50 0.06
 #> persist t=7     0.63       0.50 0.06
-#> persist t=8     0.69       0.53 0.01
+#> persist t=8     0.69       0.52 0.03
 ```
 
 The pooled static model has no source of persistence and falls short in

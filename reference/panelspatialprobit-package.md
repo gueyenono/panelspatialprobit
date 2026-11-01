@@ -15,6 +15,17 @@ of Albert and Chib (1993)
 [doi:10.1111/j.1538-4632.2000.tb00413.x](https://doi.org/10.1111/j.1538-4632.2000.tb00413.x)
 and the panel models of Kakamu and Wago (2005).
 
+## See also
+
+Useful links:
+
+- <https://github.com/gueyenono/panelspatialprobit>
+
+- <https://gueyenono.github.io/panelspatialprobit/>
+
+- Report bugs at
+  <https://github.com/gueyenono/panelspatialprobit/issues>
+
 ## Author
 
 **Maintainer**: Package Author <nonoghislain@gmail.com>
@@ -22,3 +33,11 @@ and the panel models of Kakamu and Wago (2005).
 Authors:
 
 - Package Author <nonoghislain@gmail.com>
+
+Other contributors:
+
+- R Core Team (RNG and nmath code ported to Rust; see inst/COPYRIGHTS)
+  \[copyright holder\]
+
+- Authors of the dependency Rust crates (see inst/AUTHORS) \[copyright
+  holder\]

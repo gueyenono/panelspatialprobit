@@ -49,6 +49,11 @@ The statistics are:
 - `persistence`: the share of units whose outcome equals that of the
   previous period, which checks the dependence over time (\\T \ge 2\\).
 
+The posterior draws are processed in parallel under the user's
+[`future::plan()`](https://future.futureverse.org/reference/plan.html)
+(see "Parallel post-processing" in
+[`psp_control()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_control.md)).
+
 ## References
 
 Gelman, A., Meng, X.-L. and Stern, H. (1996). Posterior predictive
@@ -69,21 +74,21 @@ psp_ppc(fit, draws = 50, seed = 1)
 #> 
 #> share:
 #>            observed rep_mean rep_q2.5 rep_q97.5  ppp
-#> P(y=1) t=1     0.48    0.552    0.320     0.680 0.84
-#> P(y=1) t=2     0.64    0.630    0.449     0.791 0.60
-#> P(y=1) t=3     0.52    0.502    0.360     0.680 0.50
-#> P(y=1) t=4     0.60    0.529    0.258     0.680 0.34
+#> P(y=1) t=1     0.48    0.538    0.236     0.720 0.80
+#> P(y=1) t=2     0.64    0.653    0.449     0.800 0.70
+#> P(y=1) t=3     0.52    0.493    0.320     0.640 0.54
+#> P(y=1) t=4     0.60    0.523    0.360     0.671 0.28
 #> 
 #> moran:
 #>           observed rep_mean rep_q2.5 rep_q97.5  ppp
-#> Moran t=1    0.145    0.084   -0.213     0.332 0.32
-#> Moran t=2    0.282    0.149   -0.090     0.394 0.18
-#> Moran t=3   -0.100   -0.009   -0.290     0.276 0.70
-#> Moran t=4    0.283    0.103   -0.146     0.386 0.08
+#> Moran t=1    0.145    0.098   -0.138     0.307 0.36
+#> Moran t=2    0.282    0.122   -0.189     0.384 0.14
+#> Moran t=3   -0.100    0.016   -0.233     0.343 0.78
+#> Moran t=4    0.283    0.095   -0.208     0.314 0.04
 #> 
 #> persistence:
 #>             observed rep_mean rep_q2.5 rep_q97.5  ppp
-#> persist t=2     0.68    0.568    0.400     0.782 0.26
-#> persist t=3     0.64    0.621    0.480     0.760 0.50
-#> persist t=4     0.60    0.609    0.449     0.760 0.66
+#> persist t=2     0.68    0.579    0.440     0.813 0.24
+#> persist t=3     0.64    0.600    0.378     0.751 0.50
+#> persist t=4     0.60    0.614    0.409     0.760 0.60
 ```

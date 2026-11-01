@@ -128,6 +128,8 @@ $$\partial P(y_{it} = 1) / \partial x_{jt,r} =
 where \(m_t = S^{-1}X_t\beta\) and \(s_i^2 = (1 + \sigma_\alpha^2)
 [S^{-1}S^{-\top}]_{ii}\). Direct impacts average the \(i = j\) terms, total
 impacts average row sums, and indirect = total - direct.</p>
+<p>The posterior draws are processed in parallel under the user's
+<code><a href="https://future.futureverse.org/reference/plan.html" class="external-link">future::plan()</a></code> (see "Parallel post-processing" in <code><a href="psp_control.html">psp_control()</a></code>).</p>
     </div>
 
     <div class="section level2">

@@ -184,7 +184,7 @@ s[s$variable == "x1" & s$effect == "total", c("category", "mean", "q2.5", "q97.5
 #> 21   medium  0.0565979051  0.03058806  0.08141688
 #> 23     high  0.3400576925  0.27881770  0.41981368
 sum(s$mean[s$variable == "x1" & s$effect == "total"])
-#> [1] 3.474868e-17
+#> [1] -3.122502e-17
 ```
 
 The options of

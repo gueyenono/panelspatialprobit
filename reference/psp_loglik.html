@@ -133,6 +133,8 @@ problem and becomes unreliable beyond a few hundred observations.</p>
 the parameters, so <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">AIC()</a></code> and <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">BIC()</a></code> work. <code>psp_dic()</code> computes the
 deviance information criterion (Spiegelhalter et al. 2002) from the
 marginal likelihood.</p>
+<p>The posterior draws are processed in parallel under the user's
+<code><a href="https://future.futureverse.org/reference/plan.html" class="external-link">future::plan()</a></code> (see "Parallel post-processing" in <code><a href="psp_control.html">psp_control()</a></code>).</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
@@ -152,21 +154,22 @@ Statistics: Proceedings of the 23rd Symposium on the Interface</em>, 571-578.</p
 <span class="r-in"><span>                control <span class="op">=</span> <span class="fu"><a href="psp_control.html">psp_control</a></span><span class="op">(</span>iter <span class="op">=</span> <span class="fl">200</span>, warmup <span class="op">=</span> <span class="fl">100</span>, chains <span class="op">=</span> <span class="fl">1</span>, seed <span class="op">=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Possible convergence problems (R-hat &gt; 1.01 or bulk ESS &lt; 100) for: (Intercept), x1, rho, sigma_alpha. Consider more iterations.</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/logLik.html" class="external-link">logLik</a></span><span class="op">(</span><span class="va">fit</span>, reps <span class="op">=</span> <span class="fl">200</span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>The GHK estimates are unreliable (Monte Carlo se up to 0.97 on the log scale): increase 'reps'. GHK needs many replications for large N x T.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 'log Lik.' -29.36441 (df=4)</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>The GHK estimates are unreliable (Monte Carlo se up to 0.94 on the log scale): increase 'reps'. GHK needs many replications for large N x T.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 'log Lik.' -36.6207 (df=4)</span>
 <span class="r-in"><span><span class="fu">psp_dic</span><span class="op">(</span><span class="va">fit</span>, draws <span class="op">=</span> <span class="fl">20</span>, reps <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span></span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>The GHK estimates are unreliable (Monte Carlo se up to 1.00 on the log scale): increase 'reps'. GHK needs many replications for large N x T.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Negative p_D: the GHK error dominates; increase 'reps'.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $dic</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 73.76084</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 53.78186</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $p_d</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 3.777308</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -18.66173</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $d_bar</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 69.98353</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 72.44359</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $d_hat</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 66.20622</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 91.10532</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 </code></pre></div>
     </div>

@@ -95,6 +95,11 @@ m_t\\, and the responses are computed exactly from the reduced form (no
 simulation; `nsim` is unused). Static models are accepted too; their
 responses vanish after the shock ends.
 
+The posterior draws are processed in parallel under the user's
+[`future::plan()`](https://future.futureverse.org/reference/plan.html)
+(see "Parallel post-processing" in
+[`psp_control()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_control.md)).
+
 ## Examples
 
 ``` r
@@ -110,8 +115,8 @@ psp_response_path(fit, "x1", draws = 50, nsim = 5, seed = 1)
 #> Average change over all units:
 #>  horizon period   mean     sd   q2.5  q97.5
 #>        0      2 0.2352 0.0671 0.1195 0.3668
-#>        1      3 0.1078 0.0646 0.0234 0.2410
-#>        2      4 0.0498 0.0466 0.0015 0.1614
-#>        3      5 0.0254 0.0338 0.0000 0.0925
-#>        4      6 0.0149 0.0229 0.0000 0.0755
+#>        1      3 0.1068 0.0622 0.0217 0.2519
+#>        2      4 0.0463 0.0382 0.0029 0.1422
+#>        3      5 0.0248 0.0238 0.0000 0.0734
+#>        4      6 0.0123 0.0151 0.0000 0.0476
 ```

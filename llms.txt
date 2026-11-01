@@ -40,11 +40,26 @@ $`\kappa_{j-1} < z_{it} \le \kappa_j`$ (ordered). Supported options:
   and an experimental simulated likelihood with DIC
   ([`psp_loglik()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md),
   [`psp_dic()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)).
-- **Sampler:** written in C++. Several chains are reproducible from one
-  seed, and convergence diagnostics come from the `posterior` package.
+- **Sampler:** written in Rust. Chains run in parallel threads (`cores`)
+  and are reproducible from one seed, whatever the number of cores;
+  impacts, predictions and the other post-processing steps run in
+  parallel over
+  [`future::plan()`](https://future.futureverse.org/reference/plan.html).
+  Convergence diagnostics come from the `posterior` package.
 
 The package is in early development (see `plan/` for the roadmap). Rows
 must form a balanced panel (outcomes may be missing).
+
+## Installation
+
+The package is not on CRAN yet. Installing it from source needs a Rust
+toolchain (Cargo and rustc \>= 1.84; see <https://rustup.rs>):
+
+``` r
+
+# install.packages("remotes")
+remotes::install_github("gueyenono/panelspatialprobit")
+```
 
 ## Example
 
@@ -87,8 +102,8 @@ variant. Each iteration draws, in order:
 
 ## Validation
 
-- **Reference sampler:** the C++ engine is tested against a dense pure-R
-  sampler that uses different algorithms
+- **Reference sampler:** the Rust engine is tested against a dense
+  pure-R sampler that uses different algorithms
   (`tests/testthat/test-reference.R`).
 - **Simulation-based calibration:** every supported model variant passes
   SBC (`validation/sbc/run_sbc.R`).

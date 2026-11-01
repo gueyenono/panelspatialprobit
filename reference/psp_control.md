@@ -46,12 +46,18 @@ psp_control(
 
 - cores:
 
-  Number of cores used to run chains in parallel (forking, so only
-  effective on Unix-alikes). Results do not depend on `cores`.
+  Number of chains run at once, on separate threads (on every operating
+  system, Windows included). Results do not depend on `cores`. Under
+  `R CMD check` (`_R_CHECK_LIMIT_CORES_`) at most 2 are used.
 
 - seed:
 
-  Optional integer seed. Results are reproducible given `seed`.
+  Optional integer seed. Given `seed`, results are reproducible on a
+  given platform, whatever `cores` and the user's
+  [`RNGkind()`](https://rdrr.io/r/base/Random.html): each chain draws
+  from its own L'Ecuyer-CMRG stream derived from `seed`, and the
+  session's random number state is left unchanged. Without `seed`, one
+  is drawn from the session's generator (`fit$seed`).
 
 - z_sweeps:
 
@@ -102,12 +108,28 @@ psp_control(
 
 - progress:
 
-  Logical; print sampling progress (only when chains run sequentially,
-  i.e. `cores = 1`).
+  Logical; print sampling progress, for each chain.
 
 ## Value
 
 An object of class `psp_control`.
+
+## Parallel post-processing
+
+[`psp_impacts()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_impacts.md),
+[predict()](https://gueyenono.github.io/panelspatialprobit/reference/psprobit-methods.md),
+[`psp_ppc()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_ppc.md),
+[`psp_response_path()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_response_path.md),
+[`psp_loglik()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md),
+[`logLik()`](https://rdrr.io/r/stats/logLik.html) and
+[`psp_dic()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_loglik.md)
+work through the posterior draws in blocks and follow the
+[`future::plan()`](https://future.futureverse.org/reference/plan.html)
+set by the user: for example
+`future::plan("multisession", workers = 4)`, or
+`future::plan("multicore", workers = 4)` on Unix-alikes. The default
+sequential plan runs in the current R session. Results do not depend on
+the plan or the number of workers.
 
 ## Examples
 

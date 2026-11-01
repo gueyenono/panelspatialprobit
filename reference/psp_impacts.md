@@ -77,6 +77,11 @@ For regressor \\r\\ and period \\t\\, \$\$\partial P(y\_{it} = 1) /
 average the \\i = j\\ terms, total impacts average row sums, and
 indirect = total - direct.
 
+The posterior draws are processed in parallel under the user's
+[`future::plan()`](https://future.futureverse.org/reference/plan.html)
+(see "Parallel post-processing" in
+[`psp_control()`](https://gueyenono.github.io/panelspatialprobit/reference/psp_control.md)).
+
 ## Examples
 
 ``` r
