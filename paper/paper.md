@@ -692,15 +692,18 @@ grids are summed over periods, and identical periods are computed once.
 **Per-iteration cost.** The cost is $O(T\,\operatorname{nnz}(W) + nk)$
 without spatial errors or spatial effects, plus the numeric factorisation
 of the sparse $N \times N$ matrix $P$ otherwise. No $n \times n$ object is
-formed. On one core, an iteration takes 1.3 ms for a SAR random-effects
-probit with $N = 1{,}000$, $T = 10$ and $k = 5$, and 33 ms with
+formed. On one core, an iteration takes 1.0 ms for a SAR random-effects
+probit with $N = 1{,}000$, $T = 10$ and $k = 5$, and 24 ms with
 $N = 10{,}000$ and $T = 20$ ($n = 200{,}000$), on the computer described in
-the computational details (Section 9). The factorisation roughly doubles
-the cost for a SEM model (Table 5). [TODO: rerun on the release version.]
+the computational details (Section 9). The factorisation makes a SEM model
+1.7 to 1.8 times as costly (Table 5). [TODO: rerun on the release version.]
 
 **Chains and reproducibility.** Each chain runs on its own thread with its
 own L'Ecuyer-CMRG stream, so results do not depend on the number of cores,
-and the user's random number state is left unchanged. Impacts, predictions
+and the user's random number state is left unchanged. Within a chain, the
+latent sweep can update the periods on several threads
+(`psp_control(threads_per_chain = )`): each period draws from its own
+substream, so this does not change the results either. Impacts, predictions
 and the other post-processing steps work through the posterior draws in
 blocks over the workers of the user's `future` plan (Bengtsson 2021), with
 results that do not depend on the plan. By default four
@@ -1181,11 +1184,11 @@ agree up to Monte Carlo error:
   posterior means of all ten parameters agree within 0.65 posterior
   standard deviations. `spatialprobit` had to be started from good values, because
   its defaults fail on these data. Given Section 5.3, exact agreement is not
-  expected. On one core, `panelspatialprobit` took 2.0 s for two chains of
+  expected. On one core, `panelspatialprobit` took 1.6 s for two chains of
   4,000 iterations, against 14 s for one chain of 7,000 in `spatialprobit`.
 - **`spatialprobit::sarorderedprobit`**, on a simulated pooled SAR ordered
   probit: a 20 × 20 rook grid, $T = 1$, $J = 4$, with near-diffuse priors on
-  both sides. Every posterior mean agrees within 0.07 posterior standard
+  both sides. Every posterior mean agrees within 0.08 posterior standard
   deviations, and the posterior standard deviations agree within 2%. The
   largest difference is for $\rho$: 0.004, or 0.07 standard deviations,
   which is small but beyond Monte Carlo error. This is consistent with the
@@ -1193,9 +1196,9 @@ agree up to Monte Carlo error:
 
   The difference in mixing is large. `spatialprobit` updates its
   cut-points with the Albert–Chib step alone. With 4 chains of 50,000 draws
-  it reached a bulk ESS of only about 400 for the cut-points, in 4.2
+  it reached a bulk ESS of only about 400 for the cut-points, in 4.1
   minutes. `panelspatialprobit` reached about 6,000–7,000 with 4 chains of
-  8,000 draws, in 2 s. Per second, that is about 1,800 times as much ESS
+  8,000 draws, in 1.3 s. Per second, that is about 3,000 times as much ESS
   for the cut-points.
 
 ## 5.7 Performance
@@ -1210,12 +1213,12 @@ Table 5: Speed and mixing, on one core of an Intel Core i7-4790K
 
 | Model | $N$ | $T$ | $n$ | ms per iteration | ESS per second (range over parameters) |
 |---|---|---|---|---|---|
-| SAR probit | 1,000 | 10 | 10,000 | 1.3 | 28–68 |
-| SAR ordered probit | 1,000 | 10 | 10,000 | 1.7 | 24–84 |
-| SEM probit | 1,000 | 10 | 10,000 | 2.7 | 9–37 |
-| SAR probit | 10,000 | 20 | 200,000 | 33 | 0.7–2.8 |
-| SAR ordered probit | 10,000 | 20 | 200,000 | 41 | 0.5–4.0 |
-| SEM probit | 10,000 | 20 | 200,000 | 74 | 0.7–1.1 |
+| SAR probit | 1,000 | 10 | 10,000 | 1.0 | 33–94 |
+| SAR ordered probit | 1,000 | 10 | 10,000 | 1.2 | 36–120 |
+| SEM probit | 1,000 | 10 | 10,000 | 1.9 | 12–43 |
+| SAR probit | 10,000 | 20 | 200,000 | 24 | 1.1–4.3 |
+| SAR ordered probit | 10,000 | 20 | 200,000 | 30 | 0.6–5.2 |
+| SEM probit | 10,000 | 20 | 200,000 | 40 | 0.7–2.4 |
 
 Each model was fitted with one chain: 5,000 iterations after 5,000 of
 warm-up at $N = 1{,}000$, and 1,000 after 1,000 at $N = 10{,}000$. The ESS
@@ -1226,14 +1229,14 @@ intercept or $\sigma_\alpha$ in the SAR models, and $\lambda$ in the SEM
 model.
 
 The ordered model costs about a quarter more per iteration than the binary
-one, mainly for the cut-point updates. The SEM model costs two to two and
-a half times as much, mainly because it factorises the sparse $N \times N$ precision of the random
+one, mainly for the cut-point updates. The SEM model costs 1.7 to 1.8
+times as much, mainly because it factorises the sparse $N \times N$ precision of the random
 effects in every iteration, since that precision depends on $\lambda$.
-At $N = 10{,}000$ and $T = 20$, 10,000 iterations take about 5.5 minutes
-for the SAR probit, 7 minutes for the ordered model and 12.5 minutes for
+At $N = 10{,}000$ and $T = 20$, 10,000 iterations take about 4 minutes
+for the SAR probit, 5 minutes for the ordered model and 6.5 minutes for
 the SEM model, including the sparse log-determinant grid. Impacts are computed after
-sampling. With 200 draws at $N = 1{,}000$ they take 4.3 s, using the
-stochastic diagonals. With 50 draws at $N = 10{,}000$ they take 19 s.
+sampling. With 100 draws at $N = 1{,}000$ they take 0.6 s, using the
+stochastic diagonals. With 50 draws at $N = 10{,}000$ they take 4 s.
 
 For ordered models, the cut-point move of Section 3.5 is what makes large
 panels feasible. At $N = 400$, $T = 5$ it raises the ESS per second of the
@@ -1307,9 +1310,9 @@ fit <- psprobit(y ~ x1 + x2, data = d, index = c("id", "time"), W = W,
                                       chains = 4, cores = 4, seed = 1))
 ```
 
-Chains run in parallel on `cores` cores. Each has its own random number
-stream derived from `seed`, so the results do not depend on the number of
-cores.
+Chains run in parallel on `cores` cores, and `threads_per_chain` threads
+share the latent sweep within each chain. Each chain has its own random
+number stream derived from `seed`, so the results depend on neither.
 
 ## 6.3 Output and convergence
 

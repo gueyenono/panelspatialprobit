@@ -72,6 +72,9 @@ pub struct SamplerInput {
     pub warmup: usize,
     pub thin: usize,
     pub z_sweeps: usize,
+    /// Threads for the latent sweep, which runs periods in parallel; the
+    /// draws do not depend on it.
+    pub threads: usize,
     pub cut_sampler: CutSampler,
     pub scale_move: bool,
     pub beta_start: Vec<f64>,
@@ -129,6 +132,9 @@ impl SamplerInput {
         }
         if self.lag_col.is_some_and(|c| c >= self.k) {
             return bad("lag column out of range");
+        }
+        if self.threads == 0 {
+            return bad("threads must be at least 1");
         }
         if self.thin == 0 || self.iter / self.thin == 0 {
             return bad("no draws to save");

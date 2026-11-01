@@ -27,6 +27,33 @@ pub fn chunks(n: usize, size: usize) -> Vec<Range<usize>> {
         .collect()
 }
 
+/// Applies `f` to every task on up to `threads` scoped threads (the calling
+/// thread takes the first share), for short parallel sections inside a task,
+/// such as the period-parallel latent sweep (plan/06 R6). Tasks are split
+/// into consecutive groups; as each task owns its data, the results do not
+/// depend on `threads`.
+pub fn for_each<T: Send>(tasks: Vec<T>, threads: usize, f: impl Fn(T) + Sync) {
+    let groups = threads.clamp(1, tasks.len().max(1));
+    if groups == 1 {
+        tasks.into_iter().for_each(f);
+        return;
+    }
+    let per = tasks.len().div_ceil(groups);
+    let mut it = tasks.into_iter();
+    let first: Vec<T> = it.by_ref().take(per).collect();
+    let f = &f;
+    std::thread::scope(|s| {
+        loop {
+            let g: Vec<T> = it.by_ref().take(per).collect();
+            if g.is_empty() {
+                break;
+            }
+            s.spawn(move || g.into_iter().for_each(f));
+        }
+        first.into_iter().for_each(f);
+    });
+}
+
 /// What a running task sees: the cancel flag and its own progress counter.
 pub struct TaskCtx<'a> {
     cancel: &'a AtomicBool,

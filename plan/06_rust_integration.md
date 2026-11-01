@@ -1,6 +1,6 @@
 # 6. Rust integration
 
-*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R5 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; the branch `rust` was merged into `master` after R5); R6, R7 and the CRAN list remain. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
+*Written 2026-10-30. Status: decisions R-D1, R-D7 and R-D8 taken by the maintainer on 2026-10-30 (savvy; Rust 1.84; Rust before the first CRAN submission); the CRAN submission itself is deferred, with no date. R0-R5 done 2026-10-31 (the last C++ commit is tagged `cpp-final`; the branch `rust` was merged into `master` after R5 and deleted); R6 done 2026-11-01; R7 and the CRAN list remain. Measurements were taken on the development machine (8 cores, R 4.6.0, rustc 1.97.1) on 2026-10-30. The spike crates are not in the repository.*
 
 **Goal.** Move the heavy numerical work from C++ (RcppEigen) and from R-level loops into Rust, use Rust's safe threading where it pays off, and then delete the C++ code. The statistics stay fixed:
 
@@ -293,7 +293,7 @@ The R code involved is GPL-2+. Ported files carry R's copyright notice, and the 
 - **Chains.** As now, `.psp_streams(seed, chains)` runs `parallel::nextRNGStream()` in R and passes the six integers per chain. R stores them as signed `int`, and Rust reinterprets them as `u32`.
 - **Inside Rust.** `next_stream()` and `next_substream()` are ports of `RngStream`'s jump matrices (A^(2^127) and A^(2^76) mod m), checked against `parallel::nextRNGStream()` and `nextRNGSubStream()`.
 - **Post-processing.** `psp_ppc()`, `psp_response_path()` and `psp_loglik()` take one base stream from `.psp_streams(seed, 1)`. Rust gives posterior draw d (or GHK replication block b) the d-th stream after it, so results do not depend on the thread count. With `seed = NULL`, R draws a seed with `sample.int()` as `.psp_fit` does.
-- **Periods (R6).** In the parallel latent sweep, period t of chain c uses substream t of chain c's stream.
+- **Periods (R6).** In the latent sweep, period t (0-based) of chain c uses substream t + 1 of chain c's stream (substream 0 is the stream itself, used by the other blocks), with any number of threads.
 
 **Behaviour changes** (go in NEWS):
 
@@ -532,7 +532,7 @@ One step per row, in the order to do them.
 | 39 | R5 | Update the documentation listed under R5 *Done 2026-10-31.* | 38 | Claude |
 | 40 | R5 | Push; GitHub Actions clean on the three OSes (R5 exit) *Done 2026-10-31 (commit `b81e1c1`).* | 39 | You, or Claude when asked |
 | 41 | R5 | Merge `rust` into `master` *Done 2026-10-31.* | 40 | You, or Claude when asked |
-| 42 | after R5 | R6 optimisations, one at a time, each gated by ESS per second, the reference tests and SBC | 41 | Claude |
+| 42 | after R5 | R6 optimisations, one at a time, each gated by ESS per second, the reference tests and SBC *Done 2026-11-01; see "R6 results" below.* | 41 | Claude |
 | 43 | after R5 | R7 extensions, as wanted | 41 | Claude, when asked |
 | 44 | after R5 | "Before the CRAN submission" list, once you decide to submit | 41; CLAUDE.md items 1-5 | Claude (vendoring, `cran-comments.md`); you (win-builder, mac-builder, rhub, the submission) |
 
@@ -677,13 +677,26 @@ Steps 38-41.
 
 Step 42. Each item must show an ESS-per-second gain on the `02` §2.6 cases and pass the reference-sampler tests and SBC (CLAUDE.md "Mixing changes" convention). Read §2.6 "Mixing experiments" first.
 
-- [ ] **Period-parallel latent sweep.** Without latent AR, the z_t are conditionally independent given everything else, and each period's sweep touches only its own residual segment. Sweeping periods in parallel is therefore the same Markov kernel. With latent AR, z_t depends only on z_{t-1} and z_{t+1}: sweep all even periods in parallel, then all odd ones (chromatic Gibbs). Each period writes only r_t and r_{t+1}, so there are no races. Substream per (chain, period) (§6.6). New `psp_control(threads_per_chain = 1)`.
-- [ ] Specialise `latent_sweep` on (t errors, latent AR) with const generics.
-- [ ] Cholesky solves instead of the explicit k x k inverse in the beta block.
-- [ ] Fuse residual passes (`compute_resid` runs up to five times per iteration today).
-- [ ] Rerun R4's gate on the final configuration.
+- [x] **Period-parallel latent sweep.** Without latent AR, the z_t are conditionally independent given everything else, and each period's sweep touches only its own residual segment. Sweeping periods in parallel is therefore the same Markov kernel. With latent AR, z_t depends only on z_{t-1} and z_{t+1}: sweep all even periods in parallel, then all odd ones (chromatic Gibbs). Each period writes only r_t and r_{t+1}, so there are no races. Substream per (chain, period) (§6.6). New `psp_control(threads_per_chain = 1)`. *Done 2026-11-01: substream t + 1 of the chain's stream for period t, also with one thread, so the draws do not depend on `threads_per_chain`; `par::for_each` runs the periods on scoped threads, spawned per sweep.*
+- [x] Specialise `latent_sweep` on (t errors, latent AR) with const generics. *Done 2026-11-01 (`Period::sweep`).*
+- [x] Cholesky solves instead of the explicit k x k inverse in the beta block. *Done 2026-11-01: the rho and beta blocks work on the k-vectors X'D a_i and the factor of the precision; one pass over X fewer.*
+- [x] Fuse residual passes (`compute_resid` runs up to five times per iteration today). *Done 2026-11-01: r is kept current in place (`resid_ok`): scaled by the scale move, shifted by the random-effects draw, and kept by the sweep and the cut move; a debug-build test checks it against a fresh computation in 12 model variants. One or two computations per iteration remain.*
+- [x] Not in the list: a supernodal Cholesky factor for the random-effects precision (1.8x at N = 1,000, 3.9x at N = 10,000), row-wise gathers for `Weights::apply`, and cut-point moves that visit only the two categories they change.
+- [x] Rerun R4's gate on the final configuration. *Done 2026-11-01.*
 
 **Exit:** the §6.2 "after R6" targets met, or re-baselined with a written reason; SBC passes.
+
+**R6 results (2026-11-01):** R6 exit met (`validation/bench/rust_r6_2026-11-01.txt`). The kernels are unchanged, but every model gives different draws from R5 for the same seed (per-period substreams; with latent AR, even periods before odd ones), so the gate was rerun in full.
+
+- **Speed** (one thread; pure-Rust harness `examples/bench_chain.rs`, no set-up): SAR 1.45x, ordered 1.44x, SEM 1.52x the C++ record at N = 1,000, T = 10 (targets 1.3x and 1.5x); at N = 10,000, T = 20, 1.62x, 1.51x and 1.99x. With `threads_per_chain = 4` at N = 10,000: 3.05x, 2.81x, 2.65x (target 2.5x). `bench_models.R`, which also times the log-determinant grid and set-up, gives 1.28x / 1.35x / 1.45x at N = 1,000 and 1.38x / 1.37x / 1.88x at N = 10,000; the 1.3x SAR target is read on the harness, since the set-up did not change.
+- **Mixing** (`bench_mixing.R`, the §2.6 cases, 20 data sets, against the R5 build): ESS per draw unchanged (ratios 0.95-1.11, every 95% interval includes 1), ESS per second 1.10-1.24x.
+- **SBC.** All 30 variants, 500 replications (`sbc_2026-11-01`): no failed fit, median max R-hat at most 1.018; 10 of 185 rank tests have p < 0.05, none below the Bonferroni threshold (2.7e-4); the smallest is again `sar_lat_re_bin` `lag_z` (p = 0.002). Replications (`SBC_SEED_OFFSET=1`, 500 each) for the 9 variants with any p < 0.05: smallest p = 0.013 of 56, 4 below 0.05; `lag_z` p = 0.074.
+- **Monte Carlo** (`mc_2026-11-01`): every bias within 0.001 and every coverage within 0.03 of R4.
+- **Wang and Kockelman** (`wk_2026-11-01`): average posterior means within 0.053 and coverages within 0.06 of R4; overall coverage 0.89 in both; at rho = 0.9, 66-70% of fits have max R-hat >= 1.05 (R4 64-80%).
+- **Cross-checks.** Katrina: means within 0.04 posterior sd of R4, within 0.56 sd of `spatialprobit`; 1.6 s against 14 s. `sarorderedprobit`: within 0.08 sd (rho 0.071 sd, 0.066 in R4, and the same large `spatialprobit` ESS for rho), 1.3 s against 4.1 minutes.
+- **Tests:** the full `NOT_CRAN` suite, cargo test/clippy/fmt, `check_fit_threads.R` (all four items) pass. New `residual_kept_current` (debug build) checks the kept residual against a fresh computation in 12 variants.
+- **miri** finds undefined behaviour only inside faer 0.24.4's symbolic Cholesky (`factorize_symbolic_cholesky`, with AMD and with a custom order): `Cell::set` on uninitialised scratch reads the old value (`amd::preprocess`, `permute_self_adjoint_imp`). The value is discarded, so results do not depend on it. Pre-existing: the R5 build gives the same reports, and the R1 miri check predated the Cholesky tests. The miri command in CLAUDE.md skips `sparse::chol`; worth reporting upstream.
+- **Vignette** (`vignette_data.R`): text changed where a number did (three rank tests below 0.01, the third passing its replication; Wooldridge coverage 0.93; the rho = 0.9 R-hat shares; the cross-check agreement and times; SEM about 1.8 times the SAR cost). `paper/paper.md` Table 5 and the speed and cross-check numbers updated. Replication rows for variants not flagged this time are still the R4 runs, since `vignette_data.R` keeps the newest run per variant and seed offset.
 
 ### R7: Optional extensions
 

@@ -15,7 +15,7 @@ The design and roadmap are in `plan/`:
 | `plan/03_package_architecture.md` | API and layout |
 | `plan/04_validation_and_testing.md` | Testing |
 | `plan/05_roadmap.md` | Phases and checklists |
-| `plan/06_rust_integration.md` | Rust migration (decided 2026-10-30; R0-R5 done and merged into `master`; R6, R7 and the CRAN list remain; the last C++ version is tagged `cpp-final`) |
+| `plan/06_rust_integration.md` | Rust migration (decided 2026-10-30; R0-R5 done and merged into `master`; R6 (speed) done 2026-11-01; R7 and the CRAN list remain; the last C++ version is tagged `cpp-final`) |
 
 Read the relevant plan file before changing a sampler block. `literature/` and `related_packages/` hold reference papers and third-party package sources; both are excluded from the build.
 
@@ -42,6 +42,7 @@ Rscript validation/montecarlo/run_mc.R <reps> <cores> <lib>        # Monte Carlo
 Rscript validation/crosscheck/spatialprobit_katrina.R <lib>        # agreement with spatialprobit::sarprobit (T = 1)
 Rscript validation/crosscheck/spatialprobit_ordered.R <lib> [cores] # agreement with spatialprobit::sarorderedprobit (T = 1, ~5 min)
 Rscript validation/bench/bench_models.R <lib>                    # paper Table 5: SAR, ordered SAR and SEM timings and ESS/s (~6 min)
+Rscript validation/bench/bench_mixing.R <lib> <label> [seeds]    # ESS/s on the plan/02 §2.6 mixing cases, for the gate of a sampler change; run once per build and compare the csv files (~3 min for 20 seeds)
 Rscript validation/wang_kockelman/run_wk.R <reps> <cores> <lib>  # Wang & Kockelman (2009) simulation (~1 h for 50 reps on 7 cores)
 Rscript validation/vignette_data.R                                 # refresh vignettes/validation-*.csv after new SBC / Monte Carlo / benchmark results
 R_PARALLELLY_MAKENODEPSOCK_SETUP_STRATEGY=sequential Rscript validation/bench/bench_postproc.R <lib> [workers]   # post-processing timings, sequential and with future workers (~1 min); the variable is needed on this machine (nix .libPaths() too long for parallelly's default)
@@ -51,11 +52,13 @@ R_PARALLELLY_MAKENODEPSOCK_SETUP_STRATEGY=sequential Rscript validation/bench/be
 
 ```sh
 export PSP_CARGO_TARGET_DIR=$HOME/.cache/panelspatialprobit/target   # always: keeps cargo's ~1 GB output off the Drive mount and builds incrementally
+export CARGO_TARGET_DIR=$PSP_CARGO_TARGET_DIR                        # also, for cargo test/clippy/run: without it they write src/rust/target on the Drive
 (cd src/rust && cargo test -p pspcore && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check)   # cargo is in ~/.cargo/bin
 ~/.cache/panelspatialprobit/tools/bin/savvy-cli update . src/rust/pspr   # after changing a #[savvy] function; then roxygenise
 sh tools/vendor.sh   # writes src/rust/vendor.tar.xz (not committed) before R CMD build: R CMD check warns when an install downloads crates
 Rscript tools/rust_authors.R   # rewrite inst/AUTHORS after any change to src/rust/Cargo.lock
-(cd src/rust && MIRIFLAGS=-Zmiri-deterministic-floats cargo +nightly miri test -p pspcore -- --skip par::)   # undefined-behaviour check (~1 min)
+(cd src/rust && CARGO_TARGET_DIR=$PSP_CARGO_TARGET_DIR PSP_THREADS=1 cargo run --release --example bench_chain [25 40 10 2000 [sar ord sem]])   # sampler ms/iter and posterior means without R (rook grid, T, iterations); cargo itself needs CARGO_TARGET_DIR, PSP_CARGO_TARGET_DIR is only read by configure
+(cd src/rust && MIRIFLAGS=-Zmiri-deterministic-floats cargo +nightly miri test -p pspcore -- --skip par:: --skip residual_kept_current --skip sparse::chol)   # undefined-behaviour check (~1 min); the sparse::chol tests stop on a known report inside faer's symbolic Cholesky (plan/06 R6 results)
 Rscript validation/rust_port/check_interrupt.R <lib>   # Ctrl-C during a multi-threaded Rust job (unix)
 Rscript validation/rust_port/compare_sampler.R <lib_cpp> <lib_rust> [iter warmup chains] [case ...]   # Rust vs frozen C++ sampler: same draws, or posterior means (~2 min; 3000 1000 2 for the sparse-RE cases)
 Rscript validation/rust_port/check_fit_threads.R <lib>   # Ctrl-C, progress, mclapply and cores with the Rust sampler (unix)
@@ -80,11 +83,12 @@ Rscript validation/rust_port/check_fit_threads.R <lib>   # Ctrl-C, progress, mcl
   Only `x` columns get impacts; `durbin_of` maps `W_x` columns back to their base variables.
 - **Engine.** `R/psprobit.R` (`.psp_fit`):
   - computes the log-determinant grids for `W` and `M` (`.psp_lndet` in `R/weights.R`);
-  - runs every chain in one `psp_rs_sample()` call, on Rust threads (`cores`, every OS), each chain with its own L'Ecuyer-CMRG stream, so results are independent of `cores` and the user's RNG state is restored;
+  - runs every chain in one `psp_rs_sample()` call, on Rust threads (`cores`, every OS), each chain with its own L'Ecuyer-CMRG stream, so results are independent of `cores` and the user's RNG state is restored; `threads_per_chain` threads share each chain's latent sweep (`.psp_threads()` caps the total at 2 under `_R_CHECK_LIMIT_CORES_`);
   - assembles a `posterior` draws_array.
 - **Sampler.** `pspcore::sampler` (`src/rust/pspcore/src/sampler/`, called through `psp_rs_sample()`) runs the chains; it is a block-for-block port of the C++ sampler at tag `cpp-final`. Every model is the kernel `|A z - b|^2` with block-diagonal `A = R S`, `S_t = I - rho W_t`, `R_t = I - lambda M_t` (plan/02 s2.2). Weights are one matrix or one per period, and the log-determinant grids are averages over periods, so `T * lndet` is the sum. Block order matters: z sweep → rho (beta integrated out, given lambda) → beta → lambda → alpha → sigma_alpha → cut-points → scale move. Rho is collapsed over beta, so beta must be redrawn immediately after rho (partially collapsed Gibbs rule).
-  - **Latent sweep:** maintains the residual `r = A z - b` and updates it in place using the columns of the sparse `A`, rebuilt once per iteration (no matrix solves).
-  - **Random effects:** independent normal draws without an error term; a sparse Cholesky of `sum_t R_t'R_t + B'B / sigma^2` (pattern analysed once) with one or with spatial random effects (`effects = "spatial_random"`, `B = I - phi W`, phi drawn on the `W` grid after alpha).
+  - **Latent sweep:** maintains the residual `r = A z - b` and updates it in place using the columns of the sparse `A`, rebuilt once per iteration (no matrix solves). Each period draws from its own substream (substream t + 1 of the chain's stream) and is one task of `par::for_each`, so periods run in parallel without changing the draws; with latent AR, even periods then odd ones (`latent_block`, `Period::sweep`, specialised on t errors and the AR coupling).
+  - **Residual bookkeeping:** `r` is kept current across blocks (`resid_ok`): the scale move rescales it, the random-effects draw shifts it, the sweep and the cut move update it; `ensure_resid()` recomputes only when a block has changed parameters. A block that changes z, beta, alpha, rho or lambda must update `r` or set `resid_ok = false`; debug builds check it (`residual_kept_current` in `cargo test`).
+  - **Random effects:** independent normal draws without an error term; a supernodal sparse Cholesky of `sum_t R_t'R_t + B'B / sigma^2` (pattern analysed once) with one or with spatial random effects (`effects = "spatial_random"`, `B = I - phi W`, phi drawn on the `W` grid after alpha).
   - **Scale move:** a generalised Gibbs move on (z, beta, alpha, kappa).
   - **Truncated normal sampler:** `pspcore::dist::truncnorm`.
   - **Student-t errors** (`errors = psp_t(df)`, fixed df): precision weights `wt = 1/v` enter every quadratic form (sweep, rho/beta/lambda, alpha, cut move, scale move); `v` is drawn after alpha. With t errors `B` is recomputed every iteration.

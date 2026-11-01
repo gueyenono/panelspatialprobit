@@ -135,9 +135,10 @@ impl Csc {
         debug_assert_eq!(x.len(), self.n_rows);
         debug_assert_eq!(y.len(), self.n_cols);
         for (j, yj) in y.iter_mut().enumerate() {
+            let (a, b) = (self.colptr[j], self.colptr[j + 1]);
             let mut s = 0.0;
-            for k in self.colptr[j]..self.colptr[j + 1] {
-                s += self.val[k] * x[self.rowind[k]];
+            for (&i, &v) in self.rowind[a..b].iter().zip(&self.val[a..b]) {
+                s += v * x[i];
             }
             *yj = s;
         }

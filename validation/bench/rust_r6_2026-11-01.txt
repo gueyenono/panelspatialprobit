@@ -1,0 +1,80 @@
+Rust engine, phase R6 optimisations (plan/06 step 42), 2026-11-01.
+Build: master + R6 changes, ~/.cache/panelspatialprobit/lib_rust; the R5
+engine (master at e1ec59b) in ~/.cache/panelspatialprobit/lib_r5 for the A/B
+runs. Same machine as rust_baseline_2026-10-30.txt.
+
+Where an iteration went (R5 engine, temporary block timers, N = 1,000, T = 10):
+  SAR:  latent sweep 70%, rho/beta 13%, random effects 10%, scale move 6%
+  SEM:  random effects 48% (sparse Cholesky 0.94 ms), sweep 37%, lambda 8%
+  The sweep is bound by random numbers: one inversion normal costs 30 ns (two
+  MRG32k3a uniforms and qnorm), a truncated draw near zero about 74 ns, of the
+  sweep's 85 ns per latent value.
+
+Changes, in order, with ms/iter of the pure-Rust harness
+(pspcore/examples/bench_chain.rs; SAR / ordered / SEM at N = 1,000, T = 10):
+  R5 engine                                             1.24 / 1.64 / 2.41
+  r kept current across blocks; rho/beta on k-vectors
+    with Cholesky solves (no k x k inverse)             1.01 / 1.36 / 2.20
+  supernodal Cholesky for the random-effects precision  1.01 / 1.36 / 1.97
+  per-period sweep tasks, const-generic Period::sweep   0.92 / 1.26 / 1.84
+  row-gather Weights::apply, M e reused by lambda       0.90 / 1.24 / 1.77
+  cut-point moves visit only the two categories         0.90 / 1.15 / 1.77
+  Sparse Cholesky alone (rook 25 x 40, P = 10 R'R + I): simplicial 0.94 ms,
+  supernodal 0.53 ms; at 100 x 100: 36.3 ms and 9.4 ms.
+
+bench_models.R (models_2026-11-01; times include the log-determinant grid and
+set-up), against the C++ record (models_2026-10-29) and R4 (models_2026-10-31):
+                         C++      R4      R6    R6 vs C++
+  SAR binary,  N = 1,000   1.31    1.35    1.02   1.28x
+  SAR ordered, N = 1,000   1.66    1.75    1.23   1.35x
+  SEM binary,  N = 1,000   2.69    2.41    1.86   1.45x
+  SAR binary,  N = 10,000 32.51   33.31   23.61   1.38x
+  SAR ordered, N = 10,000 40.71   43.42   29.67   1.37x
+  SEM binary,  N = 10,000 74.44   74.91   39.63   1.88x
+  Median ESS/s over parameters, R6 / R4: 1.19, 1.56, 1.28, 1.49, 1.33, 1.85.
+  Harness per iteration (no set-up): 0.90 / 1.15 / 1.77 ms at N = 1,000
+  (1.45x / 1.44x / 1.52x the C++ record); 20.0 / 27.0 / 37.4 ms at N = 10,000.
+
+threads_per_chain (harness, N = 10,000, T = 20, 200 + 200 iterations):
+                 1 thread   4 threads   4 threads vs C++
+  SAR binary      20.0 ms    10.7 ms     3.05x
+  SAR ordered     27.0 ms    14.5 ms     2.81x
+  SEM binary      37.4 ms    28.1 ms     2.65x
+  At N = 1,000, T = 10: SAR 0.92 -> 0.67 (2 threads) -> 0.57 ms (4 threads);
+  the threads are spawned per sweep (about 15 us each), which caps the gain at
+  this size. Posterior means identical for 1, 2 and 4 threads.
+
+bench_mixing.R (plan/02 §2.6 cases, 20 data sets, 2 chains x 4,000 draws;
+mixing_r5_ / mixing_r6_2026-11-01.csv), per-data-set geometric mean ratios
+R6 / R5 with 95% t intervals:
+  balanced      ESS 0.95 (0.89-1.01)   ESS/s 1.10 (1.04-1.17)
+  latent_ar     ESS 1.11 (0.86-1.42)   ESS/s 1.13 (0.87-1.47)
+  rare          ESS 1.06 (0.83-1.35)   ESS/s 1.24 (0.96-1.59)
+  rare_ordered  ESS 0.99 (0.94-1.04)   ESS/s 1.21 (1.14-1.28)
+  The kernels are unchanged (only the order of random numbers, and with latent
+  AR the even-then-odd period order), so ESS per draw should not move.
+
+check_fit_threads.R (2 chains at once x 2 threads): interrupt in 0.19 s, no
+threads left; progress for every chain; mclapply children equal the parent;
+threads_per_chain = 3 equals 1.
+
+miri (cargo +nightly miri test -p pspcore, skipping par:: and the sampler
+test): no findings except in faer's symbolic Cholesky
+(factorize_symbolic_cholesky, with AMD and with a custom order): "reading
+memory ... but memory is uninitialized". faer writes into uninitialised
+scratch through Cell::set, whose mem::replace reads the old value
+(amd::preprocess, sparse::utils::permute_self_adjoint_imp). The value read is
+discarded, so results do not depend on it, but it is UB under Rust's rules.
+The R5 build gives the same reports; the R1 check predates the Cholesky
+tests. Not caused by R6; see plan/06 R6 results.
+
+Gate on the final configuration (lib_rust), 07:30-08:54 plus the replication:
+  SBC 30 variants x 500 (sbc_2026-11-01): 10 of 185 tests p < 0.05, smallest
+    sar_lat_re_bin lag_z 0.002 (Bonferroni 2.7e-4); offset 1 for the 9 flagged
+    variants: smallest 0.013 of 56, lag_z 0.074.
+  Monte Carlo (mc_2026-11-01): biases within 0.001, coverages within 0.03 of R4.
+  Wang and Kockelman (wk_2026-11-01): means within 0.053, coverages within 0.06
+    of R4; overall coverage 0.89.
+  Katrina (katrina_2026-11-01): within 0.04 sd of R4; 1.58 s vs 13.9 s.
+  sarorderedprobit (spatialprobit_ordered_2026-11-01): within 0.08 sd; 1.34 s
+    vs 4.07 min.

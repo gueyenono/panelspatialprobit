@@ -41,13 +41,18 @@
        lag_col = if ("lag_z" %in% colnames(X)) match("lag_z", colnames(X)) - 1L else -1L)
 }
 
-# Chains (or posterior draws) run at once: `cores`, capped at 2 under
+# Threads for the sampler: chains run at once (`cores`) and threads within
+# each chain (`per_chain`), with at most 2 in total under
 # _R_CHECK_LIMIT_CORES_, as parallel::detectCores() users are on CRAN.
-.psp_threads <- function(cores) {
+.psp_threads <- function(cores, per_chain = 1L) {
   cores <- max(1L, as.integer(cores))
+  per_chain <- max(1L, as.integer(per_chain))
   limit <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
-  if (nzchar(limit) && !identical(toupper(limit), "FALSE")) cores <- min(cores, 2L)
-  cores
+  if (nzchar(limit) && !identical(toupper(limit), "FALSE")) {
+    per_chain <- min(per_chain, 2L)
+    cores <- max(1L, min(cores, 2L %/% per_chain))
+  }
+  c(cores = cores, per_chain = per_chain)
 }
 
 # A fit's data for the Rust post-processing (plan/06 §6.8): the design,

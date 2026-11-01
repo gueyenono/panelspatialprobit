@@ -1,20 +1,25 @@
 //! Sparse Cholesky factorisation with a fixed pattern (plan/06 §6.7): the
-//! symbolic analysis (AMD ordering) is done once by faer; each new set of
-//! values is factorised numerically into the same buffers. The factor is
-//! simplicial, so L is an ordinary CSC matrix and the triangular solves are
-//! done here.
+//! symbolic analysis is done once by faer; each new set of values is
+//! factorised numerically into the same buffers.
+//!
+//! [`SparseChol::new`] (AMD ordering) makes a supernodal factor, which is
+//! faster at every size the random-effects block meets (1.8x at N = 1,000,
+//! 3.9x at N = 10,000 on a rook grid; plan/06 R6).
+//! [`SparseChol::new_unordered`] keeps the factor simplicial, so that L is an
+//! ordinary CSC matrix ([`SparseChol::factor`], for GHK).
 
 use super::Csc;
 use crate::PspError;
 use faer::dyn_stack::{MemBuffer, MemStack};
 use faer::perm::PermRef;
+use faer::sparse::linalg::cholesky::supernodal::SupernodalLltRef;
 use faer::sparse::linalg::cholesky::{
     factorize_symbolic_cholesky, CholeskySymbolicParams, SymbolicCholesky, SymbolicCholeskyRaw,
     SymmetricOrdering,
 };
 use faer::sparse::linalg::SupernodalThreshold;
 use faer::sparse::{SparseColMatRef, SymbolicSparseColMat};
-use faer::{Par, Side};
+use faer::{Conj, MatMut, Par, Side};
 
 /// A symmetric positive-definite matrix given by its lower triangle on a
 /// fixed pattern, and its Cholesky factor `Q A Q' = L L'`.
@@ -22,6 +27,7 @@ pub struct SparseChol {
     n: usize,
     lower: SymbolicSparseColMat<usize>,
     symbolic: SymbolicCholesky<usize>,
+    // L as CSC, for a simplicial factor (empty for a supernodal one)
     l_colptr: Vec<usize>,
     l_rowind: Vec<usize>,
     l_val: Vec<f64>,
@@ -33,28 +39,47 @@ pub struct SparseChol {
 
 impl SparseChol {
     /// Analyses the pattern of the lower triangle `lower` (row >= column
-    /// entries only; the values are not used), with an AMD ordering.
+    /// entries only; the values are not used), with an AMD ordering and a
+    /// supernodal factor.
     pub fn new(lower: &Csc) -> Result<Self, PspError> {
-        Self::build(lower, SymmetricOrdering::Amd)
+        Self::build(
+            lower,
+            SymmetricOrdering::Amd,
+            SupernodalThreshold::FORCE_SUPERNODAL,
+        )
     }
 
-    /// As [`Self::new`], keeping the given order (`Q = I`): for callers that
-    /// order the coordinates themselves (GHK). The identity is passed as a
-    /// custom ordering: faer 0.24.4's `SymmetricOrdering::Identity` skips the
-    /// conversion of a lower-triangle input and misreads it.
+    /// As [`Self::new`], keeping the given order (`Q = I`) and a simplicial
+    /// factor: for callers that order the coordinates themselves and read L
+    /// (GHK). The identity is passed as a custom ordering: faer 0.24.4's
+    /// `SymmetricOrdering::Identity` skips the conversion of a lower-triangle
+    /// input and misreads it.
     pub fn new_unordered(lower: &Csc) -> Result<Self, PspError> {
         let id: Vec<usize> = (0..lower.n_rows).collect();
         let perm = PermRef::new_checked(&id, &id, lower.n_rows);
-        Self::build(lower, SymmetricOrdering::Custom(perm))
+        Self::build(
+            lower,
+            SymmetricOrdering::Custom(perm),
+            SupernodalThreshold::FORCE_SIMPLICIAL,
+        )
     }
 
     /// The factor L (simplicial CSC; the diagonal is the first entry of each
-    /// column): column pointers, row indices and values.
+    /// column): column pointers, row indices and values. Needs a factor from
+    /// [`Self::new_unordered`].
     pub fn factor(&self) -> (&[usize], &[usize], &[f64]) {
+        assert!(
+            !self.l_colptr.is_empty(),
+            "sparse Cholesky: factor() needs a simplicial factor"
+        );
         (&self.l_colptr, &self.l_rowind, &self.l_val)
     }
 
-    fn build(lower: &Csc, ordering: SymmetricOrdering<usize>) -> Result<Self, PspError> {
+    fn build(
+        lower: &Csc,
+        ordering: SymmetricOrdering<usize>,
+        threshold: SupernodalThreshold,
+    ) -> Result<Self, PspError> {
         let n = lower.n_rows;
         let fail =
             |e: &dyn std::fmt::Debug| PspError::InvalidInput(format!("sparse Cholesky: {e:?}"));
@@ -70,7 +95,7 @@ impl SparseChol {
             Side::Lower,
             ordering,
             CholeskySymbolicParams {
-                supernodal_flop_ratio_threshold: SupernodalThreshold::FORCE_SIMPLICIAL,
+                supernodal_flop_ratio_threshold: threshold,
                 ..Default::default()
             },
         )
@@ -80,11 +105,7 @@ impl SparseChol {
                 let f = s.factor();
                 (f.col_ptr().to_vec(), f.row_idx().to_vec())
             }
-            SymbolicCholeskyRaw::Supernodal(_) => {
-                return Err(PspError::InvalidInput(
-                    "sparse Cholesky: expected a simplicial factor".to_string(),
-                ))
-            }
+            SymbolicCholeskyRaw::Supernodal(_) => (Vec::new(), Vec::new()),
         };
         let (perm_fwd, perm_inv) = match symbolic.perm() {
             Some(p) => {
@@ -95,7 +116,9 @@ impl SparseChol {
         };
         let l_val = vec![0.0; symbolic.len_val()];
         let buf = MemBuffer::try_new(
-            symbolic.factorize_numeric_llt_scratch::<f64>(Par::Seq, Default::default()),
+            symbolic
+                .factorize_numeric_llt_scratch::<f64>(Par::Seq, Default::default())
+                .or(symbolic.solve_in_place_scratch::<f64>(1, Par::Seq)),
         )
         .map_err(|e| fail(&e))?;
         Ok(Self {
@@ -132,21 +155,13 @@ impl SparseChol {
 
     /// `x = A^{-1} b`.
     pub fn solve(&mut self, b: &[f64], x: &mut [f64]) {
-        let n = self.n;
         // y = Q b, then L y' = y, then L' y'' = y', then x = Q' y''.
-        for i in 0..n {
+        for i in 0..self.n {
             self.work[i] = b[self.perm_fwd[i]];
         }
-        for j in 0..n {
-            let a = self.l_colptr[j];
-            let d = self.work[j] / self.l_val[a];
-            self.work[j] = d;
-            for k in a + 1..self.l_colptr[j + 1] {
-                self.work[self.l_rowind[k]] -= self.l_val[k] * d;
-            }
-        }
-        self.lt_solve_in_place();
-        for i in 0..n {
+        self.tri_solve_in_place(false);
+        self.tri_solve_in_place(true);
+        for i in 0..self.n {
             x[i] = self.work[self.perm_inv[i]];
         }
     }
@@ -155,20 +170,45 @@ impl SparseChol {
     /// C++ engine's `permutationPinv() * matrixU().solve(z)`.
     pub fn lt_solve_perm(&mut self, z: &[f64], x: &mut [f64]) {
         self.work.copy_from_slice(z);
-        self.lt_solve_in_place();
+        self.tri_solve_in_place(true);
         for i in 0..self.n {
             x[i] = self.work[self.perm_inv[i]];
         }
     }
 
-    fn lt_solve_in_place(&mut self) {
-        for j in (0..self.n).rev() {
-            let a = self.l_colptr[j];
-            let mut s = self.work[j];
-            for k in a + 1..self.l_colptr[j + 1] {
-                s -= self.l_val[k] * self.work[self.l_rowind[k]];
+    /// `work = L^{-1} work`, or `L'^{-1} work` if `transpose`.
+    fn tri_solve_in_place(&mut self, transpose: bool) {
+        let n = self.n;
+        if let SymbolicCholeskyRaw::Supernodal(s) = self.symbolic.raw() {
+            let l = SupernodalLltRef::<usize, f64>::new(s, &self.l_val);
+            let rhs = MatMut::from_column_major_slice_mut(&mut self.work, n, 1);
+            let stack = MemStack::new(&mut self.buf);
+            if transpose {
+                l.l_transpose_solve_with_conj(Conj::No, rhs, Par::Seq, stack);
+            } else {
+                l.l_solve_with_conj(Conj::No, rhs, Par::Seq, stack);
             }
-            self.work[j] = s / self.l_val[a];
+            return;
+        }
+        let (cp, ri, lv, w) = (&self.l_colptr, &self.l_rowind, &self.l_val, &mut self.work);
+        if transpose {
+            for j in (0..n).rev() {
+                let a = cp[j];
+                let mut s = w[j];
+                for k in a + 1..cp[j + 1] {
+                    s -= lv[k] * w[ri[k]];
+                }
+                w[j] = s / lv[a];
+            }
+        } else {
+            for j in 0..n {
+                let a = cp[j];
+                let d = w[j] / lv[a];
+                w[j] = d;
+                for k in a + 1..cp[j + 1] {
+                    w[ri[k]] -= lv[k] * d;
+                }
+            }
         }
     }
 }
@@ -233,30 +273,35 @@ mod tests {
             colptr.push(rowind.len());
         }
         let lower = Csc::from_parts(n, n, colptr, rowind, val.clone()).unwrap();
-        let mut ch = SparseChol::new(&lower).unwrap();
-        ch.factorize(&val).unwrap();
-        let b: Vec<f64> = (0..n).map(|i| (i as f64).cos()).collect();
-        let mut x = vec![0.0; n];
-        ch.solve(&b, &mut x);
-        for i in 0..n {
-            let ax: f64 = (0..n).map(|j| dense[j * n + i] * x[j]).sum();
-            assert!((ax - b[i]).abs() < 1e-13);
-        }
-        // Columns of Q' L'^{-T}: X X' must be A^{-1}, i.e. A X X' = I.
-        let mut xm = vec![0.0; n * n];
-        for c in 0..n {
-            let mut e = vec![0.0; n];
-            e[c] = 1.0;
-            ch.lt_solve_perm(&e, &mut xm[c * n..(c + 1) * n]);
-        }
-        for i in 0..n {
-            for j in 0..n {
-                let mut s = 0.0;
-                for p in 0..n {
-                    let xxt: f64 = (0..n).map(|c| xm[c * n + p] * xm[c * n + j]).sum();
-                    s += dense[p * n + i] * xxt;
+        // supernodal (AMD) and simplicial (given order) factors
+        for mut ch in [
+            SparseChol::new(&lower).unwrap(),
+            SparseChol::new_unordered(&lower).unwrap(),
+        ] {
+            ch.factorize(&val).unwrap();
+            let b: Vec<f64> = (0..n).map(|i| (i as f64).cos()).collect();
+            let mut x = vec![0.0; n];
+            ch.solve(&b, &mut x);
+            for i in 0..n {
+                let ax: f64 = (0..n).map(|j| dense[j * n + i] * x[j]).sum();
+                assert!((ax - b[i]).abs() < 1e-13);
+            }
+            // Columns of Q' L'^{-T}: X X' must be A^{-1}, i.e. A X X' = I.
+            let mut xm = vec![0.0; n * n];
+            for c in 0..n {
+                let mut e = vec![0.0; n];
+                e[c] = 1.0;
+                ch.lt_solve_perm(&e, &mut xm[c * n..(c + 1) * n]);
+            }
+            for i in 0..n {
+                for j in 0..n {
+                    let mut s = 0.0;
+                    for p in 0..n {
+                        let xxt: f64 = (0..n).map(|c| xm[c * n + p] * xm[c * n + j]).sum();
+                        s += dense[p * n + i] * xxt;
+                    }
+                    assert!((s - if i == j { 1.0 } else { 0.0 }).abs() < 1e-12);
                 }
-                assert!((s - if i == j { 1.0 } else { 0.0 }).abs() < 1e-12);
             }
         }
     }

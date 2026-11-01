@@ -212,8 +212,9 @@ psoprobit <- function(formula, data, index, W, model = c("sar", "sdm", "slx", "s
     kappa_start = as.double(kappa_start), alpha_every = as.integer(alpha_every))
   model_rs <- .psp_rs_model(design, y_c, ordered, has_rho, has_lambda, has_re, spatial_re)
   seeds <- vapply(streams, function(s) s[-1], integer(6))
-  out <- psp_rs_sample(model_rs, spec, seeds, .psp_threads(control$cores),
-                       isTRUE(control$progress))
+  threads <- .psp_threads(control$cores, control$threads_per_chain)
+  spec$threads_per_chain <- threads[["per_chain"]]
+  out <- psp_rs_sample(model_rs, spec, seeds, threads[["cores"]], isTRUE(control$progress))
 
   pnames <- c(colnames(X), if (has_rho) "rho", if (has_lambda) "lambda",
               if (has_re) "sigma_alpha", if (spatial_re) "phi",

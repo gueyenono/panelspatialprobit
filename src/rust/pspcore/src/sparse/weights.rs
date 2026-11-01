@@ -8,6 +8,9 @@ use crate::PspError;
 pub struct Weights {
     pub mats: Vec<Csc>,
     pub period: Vec<usize>,
+    // the transposes, so that products are row-wise gathers (about 1.5x
+    // faster than scattering column by column)
+    tmats: Vec<Csc>,
 }
 
 impl Weights {
@@ -23,7 +26,12 @@ impl Weights {
         if period.is_empty() || period.iter().any(|&u| u >= mats.len()) {
             return bad("period map is empty or points past the matrices");
         }
-        Ok(Self { mats, period })
+        let tmats = mats.iter().map(Csc::transpose).collect();
+        Ok(Self {
+            mats,
+            period,
+            tmats,
+        })
     }
 
     /// The number of units N.
@@ -45,13 +53,18 @@ impl Weights {
         self.mats.len() > 1
     }
 
+    /// `out = W v` for the `u`-th distinct matrix (length N).
+    pub fn mul_one(&self, u: usize, v: &[f64], out: &mut [f64]) {
+        self.tmats[u].tmul_vec(v, out);
+    }
+
     /// `out_t = W_t v_t` for every period, with `v` stacked time-slow,
     /// unit-fast (length N T).
     pub fn apply(&self, v: &[f64], out: &mut [f64]) {
         let n = self.n();
         for t in 0..self.periods() {
             let r = t * n..(t + 1) * n;
-            self.at(t).mul_vec(&v[r.clone()], &mut out[r]);
+            self.tmats[self.period[t]].tmul_vec(&v[r.clone()], &mut out[r]);
         }
     }
 }

@@ -8,10 +8,10 @@
 use super::griddy::draw_grid_param;
 use super::input::{ChainOutput, CutSampler, GridPrior, KappaPrior, SamplerInput, SigmaPrior};
 use super::re::ReBlock;
-use crate::dense::{cholesky, dot, spd_inverse, sq_matvec, x_mul, xt_mul};
+use crate::dense::{cholesky, dot, l_solve, lt_solve, sq_matvec, x_mul, xt_mul};
 use crate::dist::rtnorm;
-use crate::par::TaskCtx;
-use crate::rng::Rng;
+use crate::par::{self, TaskCtx};
+use crate::rng::{RMrg32k3a, Rng};
 use crate::sparse::{Csc, FilterPattern};
 use crate::PspError;
 
@@ -113,6 +113,115 @@ impl Filters {
     }
 }
 
+/// Truncation bounds of the latent values given the outcome codes: binary
+/// 1 / 0 (-1 missing), ordered 1..J (0 missing) with cut-points `kappa`.
+#[derive(Clone, Copy)]
+struct Bounds<'a> {
+    ordered: bool,
+    kappa: &'a [f64],
+}
+
+impl Bounds<'_> {
+    #[inline]
+    fn of(&self, y: i32) -> (f64, f64) {
+        if self.ordered {
+            if y == 0 {
+                (-INF, INF)
+            } else {
+                (self.kappa[y as usize - 1], self.kappa[y as usize])
+            }
+        } else if y == 1 {
+            (0.0, INF)
+        } else if y == 0 {
+            (-INF, 0.0)
+        } else {
+            (-INF, INF)
+        }
+    }
+}
+
+/// What one period's sweep reads: A_t with its squared column norms, R_{t+1}
+/// of the latent AR coupling (`None`: the identity), the outcomes and the t
+/// weights of periods t and t + 1.
+struct Period<'a> {
+    a: &'a Csc,
+    colsq: &'a [f64],
+    r_next: Option<&'a Csc>,
+    y: &'a [i32],
+    wt: &'a [f64],
+    wt1: &'a [f64],
+}
+
+impl Period<'_> {
+    /// One sweep over z_t, updating r_t and, with the latent AR coupling
+    /// (`LAG`), r_{t+1}. `T_ERR`: weights D_t from t errors.
+    #[allow(clippy::too_many_arguments)]
+    fn sweep<const T_ERR: bool, const LAG: bool>(
+        &self,
+        rng: &mut RMrg32k3a,
+        bounds: Bounds,
+        gamma: f64,
+        z: &mut [f64],
+        r: &mut [f64],
+        r1: &mut [f64],
+    ) {
+        let a = self.a;
+        for k in 0..z.len() {
+            let (cols, vals) = {
+                let (p0, p1) = (a.colptr[k], a.colptr[k + 1]);
+                (&a.rowind[p0..p1], &a.val[p0..p1])
+            };
+            let (mut ar, mut h) = (0.0, 0.0);
+            if T_ERR {
+                for (&row, &v) in cols.iter().zip(vals) {
+                    let wa = self.wt[row] * v;
+                    ar += wa * r[row];
+                    h += wa * v;
+                }
+            } else {
+                for (&row, &v) in cols.iter().zip(vals) {
+                    ar += v * r[row];
+                }
+                h = self.colsq[k];
+            }
+            if LAG {
+                match self.r_next {
+                    None => {
+                        let wv = if T_ERR { self.wt1[k] } else { 1.0 };
+                        ar -= gamma * wv * r1[k];
+                        h += gamma * gamma * wv;
+                    }
+                    Some(rm) => {
+                        for (row, v) in rm.col(k) {
+                            let wv = if T_ERR { self.wt1[row] } else { 1.0 };
+                            ar -= gamma * wv * v * r1[row];
+                            h += gamma * gamma * wv * v * v;
+                        }
+                    }
+                }
+            }
+            let mean = z[k] - ar / h;
+            let (lo, hi) = bounds.of(self.y[k]);
+            let znew = rtnorm(rng, mean, 1.0 / h.sqrt(), lo, hi);
+            let delta = znew - z[k];
+            z[k] = znew;
+            for (&row, &v) in cols.iter().zip(vals) {
+                r[row] += v * delta;
+            }
+            if LAG {
+                match self.r_next {
+                    None => r1[k] -= gamma * delta,
+                    Some(rm) => {
+                        for (row, v) in rm.col(k) {
+                            r1[row] -= gamma * v * delta;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct Chain<'a> {
     inp: &'a SamplerInput,
     n: usize,
@@ -129,20 +238,26 @@ struct Chain<'a> {
     xi: f64,
     alpha: Vec<f64>,
     kappa: Vec<f64>,
+    // observations by outcome category (ordered models)
+    cat_idx: Vec<Vec<usize>>,
     z: Vec<f64>,
     wt: Vec<f64>,
-    // design: Xm (X with the latent AR lag column), Xt = R Xm, B, chol(B)
+    // design: Xm (X with the latent AR lag column), Xt = R Xm, the
+    // precision P = Xt' D Xt + P0 of beta and its Cholesky factor
     xm: Vec<f64>,
     xt: Vec<f64>,
-    b: Vec<f64>,
-    lb: Vec<f64>,
+    prec: Vec<f64>,
+    lp: Vec<f64>,
     pc: Vec<f64>,
     mx: Vec<f64>,
     gram: Option<[Vec<f64>; 3]>,
     filters: Filters,
-    // work
+    // work: e and r as left by `compute_resid`; r is kept current by the
+    // blocks that change z or alpha in place, and `resid_ok` says whether it
+    // is (e is current only right after `compute_resid`)
     e: Vec<f64>,
     r: Vec<f64>,
+    resid_ok: bool,
     work: Vec<f64>,
 }
 
@@ -151,7 +266,7 @@ impl<'a> Chain<'a> {
     fn re_ss(&self) -> f64 {
         if self.inp.spatial_re {
             let mut wa = vec![0.0; self.nn];
-            self.inp.w.mats[0].mul_vec(&self.alpha, &mut wa);
+            self.inp.w.mul_one(0, &self.alpha, &mut wa);
             self.alpha
                 .iter()
                 .zip(&wa)
@@ -216,7 +331,8 @@ impl<'a> Chain<'a> {
         }
     }
 
-    /// Xt = R Xm and B = (Xt' D Xt + P0)^{-1} with its Cholesky factor.
+    /// Xt = R Xm and the precision P = Xt' D Xt + P0 with its Cholesky
+    /// factor.
     fn refresh_design(&mut self) -> Result<(), PspError> {
         let (n, k, inp) = (self.n, self.k, self.inp);
         if inp.has_lambda {
@@ -259,12 +375,13 @@ impl<'a> Chain<'a> {
                 }
             }
         }
-        self.b = spd_inverse(&xtx, k)?;
-        self.lb = cholesky(&self.b, k)?;
+        self.lp = cholesky(&xtx, k)?;
+        self.prec = xtx;
         Ok(())
     }
 
-    /// e = S z - Xm beta - Delta alpha and r = R e = A z - b.
+    /// e = S z - Xm beta - Delta alpha and r = R e = A z - b; with an error
+    /// term, leaves M e in `work` (the lambda block uses it).
     fn compute_resid(&mut self) {
         let (n, nn, inp) = (self.n, self.nn, self.inp);
         x_mul(&self.xm, n, &self.beta, &mut self.work);
@@ -291,92 +408,127 @@ impl<'a> Chain<'a> {
                 self.r[i] -= self.lambda * self.work[i];
             }
         }
+        self.resid_ok = true;
     }
 
-    fn bounds(&self, idx: usize) -> (f64, f64) {
-        let y = self.inp.y[idx];
-        if self.inp.ordered {
-            if y == 0 {
-                (-INF, INF)
-            } else {
-                (self.kappa[y as usize - 1], self.kappa[y as usize])
+    /// r = A z - b, recomputed only if a block has changed parameters since.
+    fn ensure_resid(&mut self) {
+        if !self.resid_ok {
+            self.compute_resid();
+        } else if cfg!(debug_assertions) {
+            // the r kept in place must match a fresh computation
+            let kept = self.r.clone();
+            self.compute_resid();
+            for (a, b) in kept.iter().zip(&self.r) {
+                assert!((a - b).abs() <= 1e-9 * (1.0 + b.abs()), "stale residual");
             }
-        } else if y == 1 {
-            (0.0, INF)
-        } else if y == 0 {
-            (-INF, 0.0)
-        } else {
-            (-INF, INF)
+            self.r = kept;
         }
     }
 
-    /// One Gibbs sweep over the latent values with residual updates
-    /// (plan/02 §2.3): z_k | . ~ TN(z_k - a_k'D r / h_k, 1 / h_k), h_k =
-    /// a_k'D a_k, then r += a_k (z_k' - z_k). With latent AR, z_{k,t} also
-    /// enters period t + 1 through column k of -gamma R_{t+1}.
-    fn latent_sweep<R: Rng>(&mut self, rng: &mut R) {
+    /// r -= R_t d for every period: alpha has moved by d.
+    fn shift_resid_alpha(&mut self, d: &[f64]) {
         let (nn, inp) = (self.nn, self.inp);
-        let gamma = self.gamma_now();
+        let mut rd = vec![0.0; nn];
+        let mut last = None;
         for t in 0..inp.periods {
-            let off = t * nn;
-            let a = self.filters.a(t);
-            let colsq = &self.filters.colsq[self.filters.pair[t]];
-            let lagged = gamma != 0.0 && t < inp.periods - 1;
-            let off1 = off + nn;
-            let r_next = if lagged {
-                self.filters.r(inp, t + 1)
-            } else {
-                None
-            };
-            for k in 0..nn {
-                let idx = off + k;
-                let (mut ar, mut h) = (0.0, 0.0);
-                if self.has_t {
-                    for (row, v) in a.col(k) {
-                        let wa = self.wt[off + row] * v;
-                        ar += wa * self.r[off + row];
-                        h += wa * v;
+            if inp.has_lambda {
+                let u = inp.m.period[t];
+                if last != Some(u) {
+                    inp.m.mul_one(u, d, &mut rd);
+                    for i in 0..nn {
+                        rd[i] = d[i] - self.lambda * rd[i];
                     }
+                    last = Some(u);
+                }
+            } else if last.is_none() {
+                rd.copy_from_slice(d);
+                last = Some(0);
+            }
+            for i in 0..nn {
+                self.r[t * nn + i] -= rd[i];
+            }
+        }
+    }
+
+    /// The latent block: `z_sweeps` Gibbs sweeps over z with residual
+    /// updates (plan/02 §2.3), z_k | . ~ TN(z_k - a_k'D r / h_k, 1 / h_k),
+    /// h_k = a_k'D a_k, then r += a_k (z_k' - z_k).
+    ///
+    /// Each period has its own random-number substream (`prngs`), so the
+    /// draws do not depend on `inp.threads` (plan/06 R6). Without latent AR
+    /// coupling the periods are conditionally independent: each runs all its
+    /// sweeps as one task. With it, z_{k,t} also enters period t + 1 through
+    /// column k of -gamma R_{t+1}, so each sweep visits the even periods and
+    /// then the odd ones (chromatic Gibbs; a period writes only r_t and
+    /// r_{t+1}).
+    fn latent_block(&mut self, prngs: &mut [RMrg32k3a]) {
+        let (nn, inp) = (self.nn, self.inp);
+        let tt = inp.periods;
+        let gamma = self.gamma_now();
+        let coupled = gamma != 0.0 && tt > 1;
+        let bounds = Bounds {
+            ordered: inp.ordered,
+            kappa: &self.kappa,
+        };
+        let filters = &self.filters;
+        let (wt, has_t) = (&self.wt[..], self.has_t);
+        let task = |t: usize, z: &mut [f64], r: &mut [f64], r1: &mut [f64], rng: &mut RMrg32k3a| {
+            let p = Period {
+                a: filters.a(t),
+                colsq: &filters.colsq[filters.pair[t]],
+                r_next: if r1.is_empty() {
+                    None
                 } else {
-                    for (row, v) in a.col(k) {
-                        ar += v * self.r[off + row];
-                    }
-                    h = colsq[k];
+                    filters.r(inp, t + 1)
+                },
+                y: &inp.y[t * nn..(t + 1) * nn],
+                wt: &wt[t * nn..(t + 1) * nn],
+                wt1: if r1.is_empty() {
+                    &[]
+                } else {
+                    &wt[(t + 1) * nn..(t + 2) * nn]
+                },
+            };
+            let sweeps = if coupled { 1 } else { inp.z_sweeps };
+            for _ in 0..sweeps {
+                match (has_t, !r1.is_empty()) {
+                    (false, false) => p.sweep::<false, false>(rng, bounds, gamma, z, r, r1),
+                    (true, false) => p.sweep::<true, false>(rng, bounds, gamma, z, r, r1),
+                    (false, true) => p.sweep::<false, true>(rng, bounds, gamma, z, r, r1),
+                    (true, true) => p.sweep::<true, true>(rng, bounds, gamma, z, r, r1),
                 }
-                if lagged {
-                    match r_next {
-                        None => {
-                            let wv = if self.has_t { self.wt[off1 + k] } else { 1.0 };
-                            ar -= gamma * wv * self.r[off1 + k];
-                            h += gamma * gamma * wv;
-                        }
-                        Some(rm) => {
-                            for (row, v) in rm.col(k) {
-                                let wv = if self.has_t { self.wt[off1 + row] } else { 1.0 };
-                                ar -= gamma * wv * v * self.r[off1 + row];
-                                h += gamma * gamma * wv * v * v;
-                            }
-                        }
-                    }
-                }
-                let mean = self.z[idx] - ar / h;
-                let (lo, hi) = self.bounds(idx);
-                let znew = rtnorm(rng, mean, 1.0 / h.sqrt(), lo, hi);
-                let delta = znew - self.z[idx];
-                self.z[idx] = znew;
-                for (row, v) in a.col(k) {
-                    self.r[off + row] += v * delta;
-                }
-                if lagged {
-                    match r_next {
-                        None => self.r[off1 + k] -= gamma * delta,
-                        Some(rm) => {
-                            for (row, v) in rm.col(k) {
-                                self.r[off1 + row] -= gamma * v * delta;
-                            }
-                        }
-                    }
-                }
+            }
+        };
+        if !coupled {
+            let tasks: Vec<_> = self
+                .z
+                .chunks_mut(nn)
+                .zip(self.r.chunks_mut(nn))
+                .zip(prngs.iter_mut())
+                .enumerate()
+                .collect();
+            par::for_each(tasks, inp.threads, |(t, ((z, r), rng))| {
+                task(t, z, r, &mut [], rng)
+            });
+            return;
+        }
+        for _ in 0..inp.z_sweeps {
+            for parity in 0..2 {
+                // period t = parity + 2 i writes r_t and r_{t+1}
+                let tasks: Vec<_> = self.z[parity * nn..]
+                    .chunks_mut(2 * nn)
+                    .zip(self.r[parity * nn..].chunks_mut(2 * nn))
+                    .zip(prngs[parity..].iter_mut().step_by(2))
+                    .enumerate()
+                    .map(|(i, ((z, r), rng))| {
+                        let (r, r1) = r.split_at_mut(nn);
+                        (parity + 2 * i, &mut z[..nn], r, r1, rng)
+                    })
+                    .collect();
+                par::for_each(tasks, inp.threads, |(t, z, r, r1, rng)| {
+                    task(t, z, r, r1, rng)
+                });
             }
         }
     }
@@ -386,14 +538,11 @@ impl<'a> Chain<'a> {
         let inp = self.inp;
         for j in 2..inp.n_cat {
             let (mut lo, mut hi) = (self.kappa[j - 1], self.kappa[j + 1]);
-            for i in 0..self.n {
-                let y = inp.y[i];
-                if y == j as i32 && self.z[i] > lo {
-                    lo = self.z[i];
-                }
-                if y == j as i32 + 1 && self.z[i] < hi {
-                    hi = self.z[i];
-                }
+            for &i in &self.cat_idx[j] {
+                lo = lo.max(self.z[i]);
+            }
+            for &i in &self.cat_idx[j + 1] {
+                hi = hi.min(self.z[i]);
             }
             if hi > lo {
                 self.kappa[j] = match inp.kappa_prior {
@@ -439,40 +588,38 @@ impl<'a> Chain<'a> {
             knew = l + (kj - l) * s1;
             logjac = (ncat[j] as f64 + 1.0) * eps;
         }
-        for i in 0..n {
-            let y = inp.y[i];
-            delta[i] = if y == j as i32 {
-                (l + (self.z[i] - l) * s1) - self.z[i]
-            } else if y == j as i32 + 1 {
-                if top {
-                    knew - kj
-                } else {
-                    (u - (u - self.z[i]) * s2) - self.z[i]
-                }
-            } else {
-                0.0
-            };
-        }
-        for t in 0..inp.periods {
-            let r = t * nn..(t + 1) * nn;
-            self.filters.a(t).mul_vec(&delta[r.clone()], &mut ad[r]);
-        }
+        // only categories j and j + 1 move: delta and A delta come from
+        // their columns alone (ad is dense, zero elsewhere)
+        ad.fill(0.0);
         let gamma = self.gamma_now();
-        if gamma != 0.0 {
-            // latent AR: -gamma R_t delta_{t-1} in period t
-            let mut tmp = vec![0.0; nn];
-            for t in 1..inp.periods {
-                let prev = &delta[(t - 1) * nn..t * nn];
-                match self.filters.r(inp, t) {
-                    None => {
-                        for i in 0..nn {
-                            ad[t * nn + i] -= gamma * prev[i];
-                        }
-                    }
+        let tt = inp.periods;
+        for (c, &i) in self.cat_idx[j]
+            .iter()
+            .map(|i| (j, i))
+            .chain(self.cat_idx[j + 1].iter().map(|i| (j + 1, i)))
+        {
+            let zi = self.z[i];
+            let d = if c == j {
+                (l + (zi - l) * s1) - zi
+            } else if top {
+                knew - kj
+            } else {
+                (u - (u - zi) * s2) - zi
+            };
+            delta[i] = d;
+            let (t, k) = (i / nn, i % nn);
+            let off = t * nn;
+            for (row, v) in self.filters.a(t).col(k) {
+                ad[off + row] += v * d;
+            }
+            // latent AR: -gamma R_{t+1} delta_t in period t + 1
+            if gamma != 0.0 && t + 1 < tt {
+                let off1 = off + nn;
+                match self.filters.r(inp, t + 1) {
+                    None => ad[off1 + k] -= gamma * d,
                     Some(rm) => {
-                        rm.mul_vec(prev, &mut tmp);
-                        for i in 0..nn {
-                            ad[t * nn + i] -= gamma * tmp[i];
+                        for (row, v) in rm.col(k) {
+                            ad[off1 + row] -= gamma * v * d;
                         }
                     }
                 }
@@ -488,9 +635,11 @@ impl<'a> Chain<'a> {
         let logr = -0.5 * dq + logjac + log_kappa_prior(knew, inp.kappa_prior)
             - log_kappa_prior(kj, inp.kappa_prior);
         if rng.unif().ln() < logr {
-            for i in 0..n {
+            for &i in self.cat_idx[j].iter().chain(&self.cat_idx[j + 1]) {
                 self.z[i] += delta[i];
-                self.r[i] += ad[i];
+            }
+            for (r, a) in self.r.iter_mut().zip(ad.iter()) {
+                *r += a;
             }
             self.kappa[j] = knew;
             true
@@ -500,14 +649,34 @@ impl<'a> Chain<'a> {
     }
 }
 
+/// The observations in each category 1..=`n_cat` (index 0 is empty).
+fn category_index(y: &[i32], n_cat: usize) -> Vec<Vec<usize>> {
+    let mut idx = vec![Vec::new(); n_cat + 1];
+    for (i, &c) in y.iter().enumerate() {
+        if c >= 1 && (c as usize) <= n_cat {
+            idx[c as usize].push(i);
+        }
+    }
+    idx
+}
+
 /// Runs one chain. `ctx` gives the cancel flag (checked every 100 iterations)
 /// and the progress counter (iterations done).
-pub fn run_chain<R: Rng>(
+pub fn run_chain(
     inp: &SamplerInput,
-    rng: &mut R,
+    rng: &mut RMrg32k3a,
     ctx: &TaskCtx,
 ) -> Result<ChainOutput, PspError> {
     inp.validate()?;
+    // the latent sweep of period t draws from substream t + 1 of the chain's
+    // stream; everything else from the stream itself
+    let mut prngs = Vec::with_capacity(inp.periods);
+    let mut sub = rng.next_substream();
+    for _ in 0..inp.periods {
+        let next = sub.next_substream();
+        prngs.push(sub);
+        sub = next;
+    }
     let mut re_block = if inp.sparse_re() {
         Some(ReBlock::new(inp)?)
     } else {
@@ -561,18 +730,20 @@ pub fn run_chain<R: Rng>(
         xi: 1.0,
         alpha: vec![0.0; nn],
         kappa,
+        cat_idx: category_index(&inp.y, if inp.ordered { j_cat } else { 0 }),
         z: vec![0.0; n],
         wt: vec![1.0; n],
         xm: inp.x.clone(),
         xt: inp.x.clone(),
-        b: Vec::new(),
-        lb: Vec::new(),
+        prec: Vec::new(),
+        lp: Vec::new(),
         pc,
         mx: Vec::new(),
         gram: None,
         filters: Filters::new(inp, latent_ar)?,
         e: vec![0.0; n],
         r: vec![0.0; n],
+        resid_ok: false,
         work: vec![0.0; n],
     };
     ch.filters.build_a(ch.rho, ch.lambda);
@@ -610,6 +781,8 @@ pub fn run_chain<R: Rng>(
     let mut kv = vec![0.0; k];
     let mut kv2 = vec![0.0; k];
     let mut kv3 = vec![0.0; k];
+    let mut wv = vec![0.0; k];
+    let mut a_old = vec![0.0; nn];
 
     let n_kappa = if inp.ordered { j_cat - 2 } else { 0 };
     let p = inp.n_par();
@@ -640,10 +813,8 @@ pub fn run_chain<R: Rng>(
 
         // 1. latent block
         ch.refresh_lag();
-        ch.compute_resid();
-        for _ in 0..inp.z_sweeps {
-            ch.latent_sweep(rng);
-        }
+        ch.ensure_resid();
+        ch.latent_block(&mut prngs);
         if latent_ar {
             ch.refresh_lag();
             ch.refresh_design()?;
@@ -651,7 +822,10 @@ pub fn run_chain<R: Rng>(
 
         // 2. rho with beta integrated out (given lambda), then 3. beta.
         //    a0 = R (z - Delta alpha), a1 = R W z; the regression is
-        //    a0 - rho a1 = Xt beta + eps.
+        //    a0 - rho a1 = Xt beta + eps. Everything needed is in the
+        //    k-vectors g_i = Xt' D a_i and the products a_i' D a_j: with
+        //    c0 = a0 - Xt beta_mean and G = Xt' D Xt = P - P0,
+        //    Xt' D c0 = g0 - G beta_mean.
         a0.copy_from_slice(&ch.z);
         if inp.has_re {
             for t in 0..tt {
@@ -666,6 +840,16 @@ pub fn run_chain<R: Rng>(
                 a0[i] -= ch.lambda * ch.work[i];
             }
         }
+        // D a0 (tmp), g0 (kv)
+        let da0: &[f64] = if has_t {
+            for i in 0..n {
+                tmp[i] = ch.wt[i] * a0[i];
+            }
+            &tmp
+        } else {
+            &a0
+        };
+        xt_mul(&ch.xt, n, da0, &mut kv);
         if inp.has_rho {
             inp.w.apply(&ch.z, &mut a1);
             if inp.has_lambda {
@@ -674,48 +858,60 @@ pub fn run_chain<R: Rng>(
                     a1[i] -= ch.lambda * ch.work[i];
                 }
             }
-            // c0 = a0 - Xt beta_mean (tmp), D c0 (tmp2), D a1 (work)
-            x_mul(&ch.xt, n, &inp.beta_mean, &mut tmp);
-            for i in 0..n {
-                tmp[i] = a0[i] - tmp[i];
-                tmp2[i] = if has_t { ch.wt[i] * tmp[i] } else { tmp[i] };
-                ch.work[i] = if has_t { ch.wt[i] * a1[i] } else { a1[i] };
+            // D a1 (tmp2), g1 (kv2)
+            let da1: &[f64] = if has_t {
+                for i in 0..n {
+                    tmp2[i] = ch.wt[i] * a1[i];
+                }
+                &tmp2
+            } else {
+                &a1
+            };
+            xt_mul(&ch.xt, n, da1, &mut kv2);
+            let (s00, s01, s11) = (dot(&a0, da0), dot(&a0, da1), dot(&a1, da1));
+            // G beta_mean = P beta_mean - P0 beta_mean (kv3)
+            sq_matvec(&ch.prec, &inp.beta_mean, &mut kv3);
+            for j in 0..k {
+                kv3[j] -= ch.pc[j];
             }
-            xt_mul(&ch.xt, n, &tmp2, &mut kv); // u0
-            xt_mul(&ch.xt, n, &ch.work, &mut kv2); // u1
-            sq_matvec(&ch.b, &kv, &mut kv3); // B u0
-            let q00 = dot(&tmp, &tmp2) - dot(&kv, &kv3);
-            let q01 = dot(&ch.work, &tmp) - dot(&kv2, &kv3);
-            sq_matvec(&ch.b, &kv2, &mut kv3); // B u1
-            let q11 = dot(&a1, &ch.work) - dot(&kv2, &kv3);
+            let bm = &inp.beta_mean;
+            let c00 = s00 - 2.0 * dot(bm, &kv) + dot(bm, &kv3);
+            let c01 = s01 - dot(bm, &kv2);
+            // w0 = Lp^{-1} Xt' D c0 (kv3), w1 = Lp^{-1} g1 (wv)
+            for j in 0..k {
+                kv3[j] = kv[j] - kv3[j];
+            }
+            l_solve(&ch.lp, &mut kv3);
+            wv.copy_from_slice(&kv2);
+            l_solve(&ch.lp, &mut wv);
+            let q00 = c00 - dot(&kv3, &kv3);
+            let q01 = c01 - dot(&kv3, &wv);
+            let q11 = s11 - dot(&wv, &wv);
             ch.rho = draw_grid_param(rng, &inp.rho, tt as f64, q00, q01, q11);
-            for i in 0..n {
-                a0[i] -= ch.rho * a1[i];
+            // Xt' D (a0 - rho a1)
+            for j in 0..k {
+                kv[j] -= ch.rho * kv2[j];
             }
         }
         {
-            for i in 0..n {
-                tmp[i] = if has_t { ch.wt[i] * a0[i] } else { a0[i] };
-            }
-            xt_mul(&ch.xt, n, &tmp, &mut kv);
+            // beta ~ N(P^{-1} (Xt' D y + P0 beta_mean), P^{-1})
             for j in 0..k {
                 kv[j] += ch.pc[j];
             }
-            sq_matvec(&ch.b, &kv, &mut kv2); // mean
-            for v in kv.iter_mut() {
-                *v = rng.norm();
+            l_solve(&ch.lp, &mut kv);
+            for (j, v) in kv2.iter_mut().enumerate() {
+                *v = kv[j] + rng.norm();
             }
-            sq_matvec(&ch.lb, &kv, &mut kv3);
-            for j in 0..k {
-                ch.beta[j] = kv2[j] + kv3[j];
-            }
+            lt_solve(&ch.lp, &mut kv2);
+            ch.beta.copy_from_slice(&kv2);
         }
+        ch.resid_ok = false;
 
         // 4. lambda | z, rho, beta, alpha (plan/02 §2.5): with e = S z - X beta
         //    - Delta alpha, the kernel is |e - lambda M e|^2.
         if inp.has_lambda {
+            // compute_resid leaves M e in work
             ch.compute_resid();
-            inp.m.apply(&ch.e, &mut ch.work);
             for i in 0..n {
                 tmp[i] = if has_t { ch.wt[i] * ch.e[i] } else { ch.e[i] };
                 tmp2[i] = if has_t {
@@ -728,6 +924,7 @@ pub fn run_chain<R: Rng>(
             let q01 = dot(&tmp, &ch.work);
             let q11 = dot(&ch.work, &tmp2);
             ch.lambda = draw_grid_param(rng, &inp.lambda, tt as f64, q00, q01, q11);
+            ch.resid_ok = false;
             ch.refresh_design()?;
             ch.filters.build_r(ch.lambda);
         }
@@ -736,6 +933,7 @@ pub fn run_chain<R: Rng>(
         // 5. random effects and their variance
         if inp.has_re {
             ch.compute_resid();
+            a_old.copy_from_slice(&ch.alpha);
             if let Some(re) = re_block.as_mut() {
                 // sparse precision: u_t = S_t z_t - X_t beta = e_t + alpha
                 for t in 0..tt {
@@ -769,10 +967,15 @@ pub fn run_chain<R: Rng>(
                     ch.alpha[i] = wu[i] / prec[i] + rng.norm() / prec[i].sqrt();
                 }
             }
+            // keep r current: alpha moved by alpha - a_old
+            for i in 0..nn {
+                a_old[i] = ch.alpha[i] - a_old[i];
+            }
+            ch.shift_resid_alpha(&a_old);
             // phi | alpha, sigma2: kernel |alpha - phi W alpha|^2 / sigma2 with log|B|
             if inp.spatial_re {
                 let mut wa = vec![0.0; nn];
-                inp.w.mats[0].mul_vec(&ch.alpha, &mut wa);
+                inp.w.mul_one(0, &ch.alpha, &mut wa);
                 let s = ch.sigma2;
                 ch.phi = draw_grid_param(
                     rng,
@@ -798,7 +1001,7 @@ pub fn run_chain<R: Rng>(
 
         // 5b. mixing variances of t errors: v_i | . ~ IG((nu + 1)/2, (nu + r_i^2)/2)
         if has_t {
-            ch.compute_resid();
+            ch.ensure_resid();
             for i in 0..n {
                 ch.wt[i] = rng.gamma(0.5 * (inp.nu + 1.0), 2.0 / (inp.nu + ch.r[i] * ch.r[i]));
             }
@@ -807,7 +1010,7 @@ pub fn run_chain<R: Rng>(
 
         // 6. cut-points
         if inp.ordered {
-            ch.compute_resid();
+            ch.ensure_resid();
             ch.cut_ac_step(rng);
             if inp.cut_sampler == CutSampler::Transform {
                 for j in 2..j_cat {
@@ -833,7 +1036,7 @@ pub fn run_chain<R: Rng>(
         //    x = (z, beta, alpha, kappa).
         if inp.scale_move {
             ch.refresh_lag();
-            ch.compute_resid();
+            ch.ensure_resid();
             // gamma (latent AR) is not rescaled: its column z_{t-1} already is
             kv.copy_from_slice(&ch.beta);
             if let Some(c) = inp.lag_col {
@@ -872,8 +1075,11 @@ pub fn run_chain<R: Rng>(
                     g = prop;
                 }
             }
-            for v in ch.z.iter_mut() {
-                *v *= g;
+            // r = A z - b is linear in (z, beta, alpha) jointly, and gamma's
+            // column z_{t-1} is rescaled with z, so r scales with g too
+            for (z, r) in ch.z.iter_mut().zip(&mut ch.r) {
+                *z *= g;
+                *r *= g;
             }
             let gam = ch.gamma_now();
             for v in ch.beta.iter_mut() {
@@ -1050,6 +1256,7 @@ pub fn cut_kernel<R: Rng>(
         warmup: 0,
         thin: 1,
         z_sweeps: 1,
+        threads: 1,
         cut_sampler: CutSampler::Transform,
         scale_move: false,
         beta_start: Vec::new(),
@@ -1082,18 +1289,20 @@ pub fn cut_kernel<R: Rng>(
         xi: 1.0,
         alpha: Vec::new(),
         kappa,
+        cat_idx: category_index(y, n_cat),
         z: z.to_vec(),
         wt: vec![1.0; n],
         xm: Vec::new(),
         xt: Vec::new(),
-        b: Vec::new(),
-        lb: Vec::new(),
+        prec: Vec::new(),
+        lp: Vec::new(),
         pc: Vec::new(),
         mx: Vec::new(),
         gram: None,
         filters: Filters::new(&inp, false)?,
         e: vec![0.0; n],
         r: z.iter().zip(mu).map(|(z, m)| z - m).collect(),
+        resid_ok: true,
         work: vec![0.0; n],
     };
     ch.filters.build_a(0.0, 0.0);
@@ -1109,4 +1318,210 @@ pub fn cut_kernel<R: Rng>(
         }
     }
     Ok((ch.kappa[2..n_cat].to_vec(), ch.z))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::par;
+    use crate::rng::RMrg32k3a;
+    use crate::sparse::Weights;
+    use std::time::Duration;
+
+    fn rook(nr: usize, nc: usize, skip: usize) -> Csc {
+        // rook neighbours, minus every `skip`-th link (a second W for
+        // time-varying weights), row-standardised
+        let mut trip = Vec::new();
+        for r in 0..nr {
+            for c in 0..nc {
+                let i = r * nc + c;
+                let mut nb = Vec::new();
+                for (ok, j) in [
+                    (r > 0, i.wrapping_sub(nc)),
+                    (r + 1 < nr, i + nc),
+                    (c > 0, i.wrapping_sub(1)),
+                    (c + 1 < nc, i + 1),
+                ] {
+                    if ok && (skip == 0 || (i + j) % skip != 0 || nb.is_empty()) {
+                        nb.push(j);
+                    }
+                }
+                for &j in &nb {
+                    trip.push((i, j, 1.0 / nb.len() as f64));
+                }
+            }
+        }
+        Csc::from_triplets(nr * nc, nr * nc, &trip).unwrap()
+    }
+
+    #[derive(Clone, Copy, Default)]
+    struct Variant {
+        rho: bool,
+        lambda: bool,
+        re: bool,
+        spatial_re: bool,
+        ordered: bool,
+        t_errors: bool,
+        latent_ar: bool,
+        varying_w: bool,
+        scale_move: bool,
+    }
+
+    fn input(v: Variant) -> SamplerInput {
+        let (nn, tt, k) = (20, 3, 3);
+        let n = nn * tt;
+        let mut rng = RMrg32k3a::from_seed([7; 6]).unwrap();
+        let mut x = vec![1.0; n * k];
+        for e in x[n..].iter_mut() {
+            *e = rng.norm();
+        }
+        let y = (0..n)
+            .map(|i| {
+                let z = x[n + i] + 0.5 * rng.norm();
+                if v.ordered {
+                    1 + (z > -0.5) as i32 + (z > 0.5) as i32
+                } else {
+                    (z > 0.0) as i32
+                }
+            })
+            .collect();
+        let w = if v.varying_w {
+            Weights::new(vec![rook(4, 5, 0), rook(4, 5, 3)], vec![0, 1, 0]).unwrap()
+        } else {
+            Weights::new(vec![rook(4, 5, 0)], vec![0; tt]).unwrap()
+        };
+        let grid: Vec<f64> = (0..=18).map(|i| -0.9 + 0.1 * i as f64).collect();
+        let gp = GridPrior {
+            a: 1.0,
+            b: 1.0,
+            min: -1.0,
+            max: 1.0,
+            lndet: grid.iter().map(|g| -0.3 * g * g).collect(),
+            grid,
+        };
+        SamplerInput {
+            y,
+            x,
+            k,
+            n_units: nn,
+            periods: tt,
+            n_cat: if v.ordered { 3 } else { 2 },
+            ordered: v.ordered,
+            has_rho: v.rho,
+            has_lambda: v.lambda,
+            has_re: v.re,
+            spatial_re: v.spatial_re,
+            m: w.clone(),
+            w,
+            beta_mean: vec![0.1; k],
+            beta_prec: (0..k * k)
+                .map(|i| if i % (k + 1) == 0 { 0.1 } else { 0.0 })
+                .collect(),
+            rho: gp.clone(),
+            lambda: gp,
+            phi_a: 1.0,
+            phi_b: 1.0,
+            nu: if v.t_errors { 5.0 } else { 0.0 },
+            lag_col: v.latent_ar.then_some(k - 1),
+            sigma_prior: SigmaPrior::HalfCauchy { scale: 1.0 },
+            kappa_prior: if v.ordered {
+                KappaPrior::Normal { mean: 0.0, sd: 3.0 }
+            } else {
+                KappaPrior::Flat
+            },
+            iter: 60,
+            warmup: 60,
+            thin: 1,
+            z_sweeps: 2,
+            threads: 1,
+            cut_sampler: CutSampler::Transform,
+            scale_move: v.scale_move,
+            beta_start: vec![0.0; k],
+            rho_start: 0.0,
+            lambda_start: 0.0,
+            sigma2_start: 1.0,
+            kappa_start: if v.ordered { vec![1.0] } else { Vec::new() },
+            alpha_every: 0,
+        }
+    }
+
+    /// Every block that keeps r = A z - b current in place agrees with a
+    /// fresh computation (`ensure_resid` checks this in debug builds).
+    #[test]
+    fn residual_kept_current() {
+        let base = Variant {
+            rho: true,
+            re: true,
+            scale_move: true,
+            ..Default::default()
+        };
+        let variants = [
+            base,
+            Variant {
+                scale_move: false,
+                ..base
+            },
+            Variant { re: false, ..base },
+            Variant {
+                ordered: true,
+                ..base
+            },
+            Variant {
+                t_errors: true,
+                ordered: true,
+                ..base
+            },
+            Variant {
+                rho: false,
+                lambda: true,
+                ..base
+            },
+            Variant {
+                lambda: true,
+                t_errors: true,
+                ..base
+            },
+            Variant {
+                lambda: true,
+                varying_w: true,
+                ..base
+            },
+            Variant {
+                latent_ar: true,
+                ordered: true,
+                ..base
+            },
+            Variant {
+                latent_ar: true,
+                lambda: true,
+                t_errors: true,
+                ..base
+            },
+            Variant {
+                spatial_re: true,
+                ..base
+            },
+            Variant {
+                varying_w: true,
+                ordered: true,
+                scale_move: false,
+                ..base
+            },
+        ];
+        for (i, &v) in variants.iter().enumerate() {
+            let inp = input(v);
+            let out = par::run(
+                1,
+                1,
+                Duration::from_millis(50),
+                |_, ctx| {
+                    let mut rng = RMrg32k3a::from_seed([1, 2, 3, 4, 5, 6])?;
+                    run_chain(&inp, &mut rng, ctx)
+                },
+                |_| Ok::<(), ()>(()),
+            )
+            .unwrap_or_else(|_| panic!("variant {i} failed"));
+            assert!(out[0].draws.iter().all(|d| d.is_finite()), "variant {i}");
+        }
+    }
 }

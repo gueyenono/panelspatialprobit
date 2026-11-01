@@ -167,6 +167,7 @@ pub fn sampler_input(model: &ListSexp, spec: &ListSexp) -> savvy::Result<Sampler
         warmup: index(spec, s, "warmup")?,
         thin: index(spec, s, "thin")?,
         z_sweeps: index(spec, s, "z_sweeps")?,
+        threads: index(spec, s, "threads_per_chain")?,
         cut_sampler: if int1(spec, s, "cut_sampler")? == 0 {
             CutSampler::Transform
         } else {

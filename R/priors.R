@@ -101,7 +101,15 @@ psp_priors <- function(beta = prior_normal(0, 10), rho = prior_beta(1.01, 1.01),
 #' @param chains Number of chains.
 #' @param cores Number of chains run at once, on separate threads (on every
 #'   operating system, Windows included). Results do not depend on `cores`.
-#'   Under `R CMD check` (`_R_CHECK_LIMIT_CORES_`) at most 2 are used.
+#'   Under `R CMD check` (`_R_CHECK_LIMIT_CORES_`) at most 2 threads are used
+#'   in total.
+#' @param threads_per_chain Threads used within each chain by the sweep over
+#'   the latent variables, which updates the periods in parallel (each period
+#'   with its own random number substream, so results do not depend on
+#'   `threads_per_chain` either). It pays off for large panels, with many
+#'   units per period and at least as many periods as threads: for N = 10,000
+#'   and T = 20, 4 threads make a binary SAR fit about twice as fast. Keep
+#'   `cores * threads_per_chain` at most the number of physical cores.
 #' @param seed Optional integer seed. Given `seed`, results are reproducible
 #'   on a given platform, whatever `cores` and the user's [RNGkind()]: each
 #'   chain draws from its own L'Ecuyer-CMRG stream derived from `seed`, and
@@ -142,7 +150,7 @@ psp_priors <- function(beta = prior_normal(0, 10), rho = prior_beta(1.01, 1.01),
 #' psp_control(iter = 500, warmup = 250, chains = 2)
 #' @export
 psp_control <- function(iter = 2000, warmup = 1000, thin = 1, chains = 4, cores = 1,
-                        seed = NULL, z_sweeps = 1, rho_range = c(-1, 1),
+                        threads_per_chain = 1, seed = NULL, z_sweeps = 1, rho_range = c(-1, 1),
                         lambda_range = c(-1, 1),
                         lndet = c("auto", "eigen", "sparse"),
                         cutpoint_sampler = c("transform", "albert_chib"),
@@ -151,12 +159,14 @@ psp_control <- function(iter = 2000, warmup = 1000, thin = 1, chains = 4, cores 
   lndet <- match.arg(lndet)
   cutpoint_sampler <- match.arg(cutpoint_sampler)
   stopifnot(iter >= 1, warmup >= 0, thin >= 1, iter >= thin, chains >= 1, cores >= 1,
+            threads_per_chain >= 1,
             z_sweeps >= 1, length(rho_range) == 2, rho_range[1] < rho_range[2],
             length(lambda_range) == 2, lambda_range[1] < lambda_range[2],
             impacts_draws >= 1)
   structure(list(iter = as.integer(iter), warmup = as.integer(warmup),
                  thin = as.integer(thin), chains = as.integer(chains),
-                 cores = as.integer(cores), seed = seed, z_sweeps = as.integer(z_sweeps),
+                 cores = as.integer(cores), threads_per_chain = as.integer(threads_per_chain),
+                 seed = seed, z_sweeps = as.integer(z_sweeps),
                  rho_range = rho_range, lambda_range = lambda_range, lndet = lndet, cutpoint_sampler = cutpoint_sampler,
                  scale_move = isTRUE(scale_move),
                  impacts_draws = as.integer(impacts_draws),

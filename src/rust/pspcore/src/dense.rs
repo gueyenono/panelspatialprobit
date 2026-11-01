@@ -59,6 +59,30 @@ pub fn spd_inverse(a: &[f64], k: usize) -> Result<Vec<f64>, PspError> {
     Ok(inv)
 }
 
+/// Solves `L x = b` in place, `L` lower triangular k x k.
+pub fn l_solve(l: &[f64], x: &mut [f64]) {
+    let k = x.len();
+    for j in 0..k {
+        x[j] /= l[j * k + j];
+        let xj = x[j];
+        for i in j + 1..k {
+            x[i] -= l[j * k + i] * xj;
+        }
+    }
+}
+
+/// Solves `L' x = b` in place, `L` lower triangular k x k.
+pub fn lt_solve(l: &[f64], x: &mut [f64]) {
+    let k = x.len();
+    for j in (0..k).rev() {
+        let mut s = x[j];
+        for i in j + 1..k {
+            s -= l[j * k + i] * x[i];
+        }
+        x[j] = s / l[j * k + j];
+    }
+}
+
 /// `y = A x` for a k x k matrix.
 pub fn sq_matvec(a: &[f64], x: &[f64], y: &mut [f64]) {
     let k = x.len();
@@ -130,5 +154,15 @@ mod tests {
             }
         }
         assert!(cholesky(&[1.0, 2.0, 2.0, 1.0], 2).is_err());
+        // L L' x = b through the two triangular solves
+        let b = [1.0, -2.0, 0.5];
+        let mut x = b;
+        l_solve(&l, &mut x);
+        lt_solve(&l, &mut x);
+        let mut ax = [0.0; 3];
+        sq_matvec(&a, &x, &mut ax);
+        for i in 0..3 {
+            assert!((ax[i] - b[i]).abs() < 1e-14);
+        }
     }
 }

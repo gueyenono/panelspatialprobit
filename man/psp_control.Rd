@@ -10,6 +10,7 @@ psp_control(
   thin = 1,
   chains = 4,
   cores = 1,
+  threads_per_chain = 1,
   seed = NULL,
   z_sweeps = 1,
   rho_range = c(-1, 1),
@@ -35,7 +36,16 @@ psp_control(
 
 \item{cores}{Number of chains run at once, on separate threads (on every
 operating system, Windows included). Results do not depend on \code{cores}.
-Under \verb{R CMD check} (\verb{_R_CHECK_LIMIT_CORES_}) at most 2 are used.}
+Under \verb{R CMD check} (\verb{_R_CHECK_LIMIT_CORES_}) at most 2 threads are used
+in total.}
+
+\item{threads_per_chain}{Threads used within each chain by the sweep over
+the latent variables, which updates the periods in parallel (each period
+with its own random number substream, so results do not depend on
+\code{threads_per_chain} either). It pays off for large panels, with many
+units per period and at least as many periods as threads: for N = 10,000
+and T = 20, 4 threads make a binary SAR fit about twice as fast. Keep
+\code{cores * threads_per_chain} at most the number of physical cores.}
 
 \item{seed}{Optional integer seed. Given \code{seed}, results are reproducible
 on a given platform, whatever \code{cores} and the user's \code{\link[=RNGkind]{RNGkind()}}: each
